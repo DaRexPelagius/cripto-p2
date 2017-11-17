@@ -54,9 +54,9 @@ int main(int argc, char** argv) {
 	iniTablaProbs(&resultado, TAM_ALFABETO);
 	obtainprobabilidades(&resultado, fentrada, &probs, REPEATS);
 	fprintf(stdout, "Las probabilidades del espacio de claves: \n");
-	writeprobabilidades(stdout, &probs);
+	imprimirProbabilidades(stdout, &probs);
 	fprintf(stdout, "\nLas probabilidades de encontrar el texto plano en el texto:\n");
-	writeprobabilidades(fsalida, &resultado);
+	imprimirProbabilidades(fsalida, &resultado);
 	
 	
 	/* memory clear */
@@ -166,84 +166,82 @@ void iniTablaProbs(struct TABLA_PROBS* p, int m) {
 	for (i = 0; i < m; ++i) for (j = 0; j < m; ++j) p->condicionadas[i][j] = 0;
 }
 
-int obtainprobabilidades(struct TABLA_PROBS* resultado, FILE* fentrada, struct TABLA_PROBS* probs, int repeats) {
+int obtainprobabilidades(struct TABLA_PROBS* resultado, FILE* fentrada, struct TABLA_PROBS* probs, int repeticiones) {
 	
 	int i,j;
 	int m = probs->m;//Tam alfabeto
-	double count;
-	double *frecuencyCipher = NULL;
-	int key, plain, cipher;
+	double aux;
+	double *frecuenciaCifrado = NULL;
+	int clave, charplano, charcifrado;
 	char c;
 	struct TABLA_PROBS pCifrado;
 	
-	/* memory management */
-	frecuencyCipher = malloc(sizeof(double) * m);
+	//Preparamos la estructura de texto cifrado
+	frecuenciaCifrado = malloc(sizeof(double) * m);
 	pCifrado.probabilidades = malloc(sizeof(double) * m);
 	pCifrado.m = m;
 	
-	/* clear to zeros and obtain pCifrado*/
-	for (i=0; i < m; ++i) frecuencyCipher[i] = 0;
+	//Limpiamos las estructuras por si hay escritura previa en la memoria y calculas las probabiliddes de cifrado
+	for (i = 0; i < m; ++i) frecuenciaCifrado[i] = 0;
 	pCifrado.probabilidades[0] = probs->probabilidades[0];
-	for (i=1; i < m; ++i) pCifrado.probabilidades[i] = pCifrado.probabilidades[i-1] + probs->probabilidades[i];
-	for (i=0; i < m; ++i) resultado->probabilidades[i] = 0;
-	for (i=0; i < m; ++i) for (j=0; j < m; ++j) resultado->condicionadas[i][j] = 0;
+	for (i = 1; i < m; ++i) pCifrado.probabilidades[i] = pCifrado.probabilidades[i-1] + probs->probabilidades[i];
+	for (i = 0; i < m; ++i) resultado->probabilidades[i] = 0;
+	for (i = 0; i < m; ++i) for (j=0; j < m; ++j) resultado->condicionadas[i][j] = 0;
 	
-	
-	count = 0;
-	for (i=0; i < repeats; ++i) {
-		/* rewind file so that lecture starts from the beggining */
+	aux = 0;
+	for (i = 0; i < repeticiones; ++i) {
+		//Preparamos el puntero a principio del fichero
 		rewind(fentrada);
-
-		/* main loop */
+		//Calculamos la frecuencia y las probabilidades de cifrado
 		while (((c = fgetc(fentrada)) != EOF) && (fentrada != stdin || c != '\n')) {
-			key = randomKey(&pCifrado);
-			plain = getPlain(c, m);
-			if (plain < 0 || plain >= m) continue;
-			else count++;
-			cipher = (plain+key)%m;
+			clave = claveAleatoria(&pCifrado);
+			charplano = getCharPlano(c, m);
+			if (charplano < 0 || charplano >= m) continue;
+			else aux++;
+			charcifrado = (charplano + clave) % m;
 			
-			resultado->probabilidades[plain]++;
-			resultado->condicionadas[plain][cipher]++;
-			frecuencyCipher[cipher]++;
+			resultado->probabilidades[charplano]++;
+			resultado->condicionadas[charplano][charcifrado]++;
+			frecuenciaCifrado[charcifrado]++;
 		}
 	}
 	
-	/* set results */
-	for (i=0; i < m; ++i) resultado->probabilidades[i] /= count;
-	for (i=0; i < m; ++i) for (j=0; j < m; ++j) resultado->condicionadas[i][j] = frecuencyCipher[j]? resultado->condicionadas[i][j]/frecuencyCipher[j]:0;
+	//Aqui no lo entiendo muy bien pero parece que va
+	for (i=0; i < m; ++i) resultado->probabilidades[i] /= aux;
+	for (i=0; i < m; ++i) for (j=0; j < m; ++j) resultado->condicionadas[i][j] = frecuenciaCifrado[j]? resultado->condicionadas[i][j]/frecuenciaCifrado[j]:0;
 	
-	/* free memory and return */
-	free(frecuencyCipher);
+	//liberamos la memoria que hemos usaado en la funcion
+	free(frecuenciaCifrado);
 	free(pCifrado.probabilidades);
 	return 0;
 }
 //Escribe la estructura probabilidades
-void writeprobabilidades(FILE* f, struct TABLA_PROBS* p) {
+void imprimirProbabilidades(FILE* f, struct TABLA_PROBS* p) {
 	int i,j;
 	int m = p->m;
 	
 	for (i=0; i < m; i++) fprintf(f, "P(%c) = %lf\n", i+'A', p->probabilidades[i]);
 	printf("\n");
 	if (p->condicionadas) {
-		for (i=0; i < m; i++) {
-			for (j=0; j < m; j++) fprintf(f, "P(%c|%c) = %lf, ", i+'A', j+'A', p->condicionadas[i][j]);
+		for (i = 0; i < m; i++) {
+			for (j = 0; j < m; j++) fprintf(f, "P(%c|%c) = %lf, ", i + 'A', j + 'A', p->condicionadas[i][j]);
 			printf("\n\n");
 		}
 	}
 }
 //c = x mod m
-int getPlain(char c, int m) {
-	if ((c >= 'A') && (c <= 'A'+m-1)) return c - 'A';
-	else if ((c >= 'a') && (c <= 'a'+m-1)) return c - 'a';
+int getCharPlano(char c, int m) {
+	if ((c >= 'A') && (c <= 'A' + m - 1)) return c - 'A';
+	else if ((c >= 'a') && (c <= 'a' + m - 1)) return c - 'a';
 	else return -1;
 }
 //Obtiene una clave aleatoria de una distribucion de frecuencia	
-int randomKey(struct TABLA_PROBS* probs) {
+int claveAleatoria(struct TABLA_PROBS* probs) {
 	double value;
 	int i;
 	
-	value = (rand()+1.0)/RAND_MAX;
-	for (i=0; i < probs->m; ++i) {
+	value = (rand() + 1.0) / RAND_MAX;
+	for (i = 0; i < probs->m; ++i) {
 		if (value <= probs->probabilidades[i]) return i;
 	}
 	return probs->m - 1;
