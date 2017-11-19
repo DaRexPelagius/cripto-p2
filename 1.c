@@ -264,7 +264,7 @@ int obtenerprobabilidades(struct TABLA_PROBS* resultado, FILE* fentrada, struct 
 		}
 	}
 	
-	//Aqui no lo entiendo muy bien pero parece que va
+	//Divide entre los caracteres totales, para obtener la probabilidad (casos favorables/casos totales)
 	for (i=0; i < m; ++i) resultado->probabilidades[i] /= aux;
 	for (i=0; i < m; ++i) for (j=0; j < m; ++j) resultado->condicionadas[i][j] = frecuenciaCifrado[j]? resultado->condicionadas[i][j]/frecuenciaCifrado[j]:0;
 	
