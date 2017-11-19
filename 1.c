@@ -83,7 +83,6 @@ Obtiene los argumentos
 --------------------------------------------------------------------------*/
 int getArgs(int nArgs, char** args, int* flag, char* ficheroentrada, int* entrada, char* ficherosalida, int* salida) {
 	
-	printf("Aqui llega \n");
 	if (getModo(nArgs,args,flag) != 1)	return -1;
 	
 	if (nArgs == 2) {
@@ -112,19 +111,20 @@ Obtiene el modo de ejecución del programa
 int getModo(int nArgs, char** args, int* modo) {
 	int i, encontrado = 0;
 
-	for (i=1; i<nArgs; i++)
+	for (i=1; i<nArgs; i++){
 		if ((strncmp(args[i],"-P",2) == 0) && (strlen(args[i]) == 2)) {
 			if (encontrado) return -1;
 			else {
-			*modo = 1;encontrado = 1;
+			*modo = 0;encontrado = 1;
 			}
 		}
 		else if (strncmp(args[i],"-I",2) == 0) {
 			if (encontrado) return -1;
 			else {
-				*modo = 0;encontrado = 1;
+				*modo = 1;encontrado = 1;
 			}
 		}
+	}
 
 	return encontrado;
 }
