@@ -20,7 +20,7 @@ int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud);
 void iniProbsIguales(struct TABLA_PROBS* p, int m);
 void iniProbsRandom(struct TABLA_PROBS* p, int m);
 void iniTablaProbs(struct TABLA_PROBS* p, int m);
-int obtainprobabilidades(struct TABLA_PROBS* resultado, FILE* fentrada, struct TABLA_PROBS* probs, int repeticiones);
+int obtenerprobabilidades(struct TABLA_PROBS* resultado, FILE* fentrada, struct TABLA_PROBS* probs, int repeticiones);
 void imprimirProbabilidades(FILE* f, struct TABLA_PROBS* p);
 int getCharPlano(char c, int m);
 int claveAleatoria(struct TABLA_PROBS* probs);

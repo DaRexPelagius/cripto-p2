@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
 	struct TABLA_PROBS probs;
 	struct TABLA_PROBS resultado;
 	
-	/* semilla */
+	//Semilla aleatoria
 	srand(time(NULL));
 
 	//Comprobamos que los argumentos son los correctos, 2 si no se indican ficheros de entrada y de salida
@@ -52,14 +52,14 @@ int main(int argc, char** argv) {
 	
 	//Reservamos una tabla para guardar los resultados
 	iniTablaProbs(&resultado, TAM_ALFABETO);
-	obtainprobabilidades(&resultado, fentrada, &probs, REPEATS);
+	obtenerprobabilidades(&resultado, fentrada, &probs, REPEATS);
 	fprintf(stdout, "Las probabilidades del espacio de claves: \n");
 	imprimirProbabilidades(stdout, &probs);
 	fprintf(stdout, "\nLas probabilidades de encontrar el texto plano en el texto:\n");
 	imprimirProbabilidades(fsalida, &resultado);
 	
 	
-	/* memory clear */
+	//Liberamos memoria
 	freeprobabilidades(&resultado);
 	freeprobabilidades(&probs);
 	if (fentrada) fclose(fentrada);
@@ -67,10 +67,25 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
-
+/*--------------------------------------------------------------------------
+Obtiene los argumentos
+- Entrada:
+	* Número de argumentos
+	* Array de argumentos
+	* Flag indicando si se cifra o descifra
+	* Nombre del fichero de entrada
+	* Puntero indicando si hay fichero de entrada
+	* Nombre del fichero de salida
+	* Puntero indicando si hay fichero de salida
+- Salida:
+	* -1 si ocurre algun error
+	* 0 si va bien
+--------------------------------------------------------------------------*/
 int getArgs(int nArgs, char** args, int* flag, char* ficheroentrada, int* entrada, char* ficherosalida, int* salida) {
+	
+	printf("Aqui llega \n");
 	if (getModo(nArgs,args,flag) != 1)	return -1;
-
+	
 	if (nArgs == 2) {
 		*entrada = 0;
 		*salida = 0;
@@ -83,21 +98,35 @@ int getArgs(int nArgs, char** args, int* flag, char* ficheroentrada, int* entrad
 	}
 	return 0;
 }
-
-
-//Si se ejecuta normalmente devuelve 0, sino -1
+/*--------------------------------------------------------------------------
+Obtiene el modo de ejecución del programa
+- Entrada:
+	* Número de argumentos
+	* Array de argumentos
+	* Puntero al modo
+- Salida:
+	* -1 si se repite el modo
+	* 0 si el modo no aparece
+	* 1 si el modo aparece una vez
+--------------------------------------------------------------------------*/
 int getModo(int nArgs, char** args, int* modo) {
-	int i;
-	int aux = -1;
-	for (i = 1; i < nArgs; i++){
-		if ((strncmp(args[i], "-P", 2) == 0) && (strlen(args[i]) == 2)) {
-			*modo = 1; aux = 0; break;
+	int i, encontrado = 0;
+
+	for (i=1; i<nArgs; i++)
+		if ((strncmp(args[i],"-P",2) == 0) && (strlen(args[i]) == 2)) {
+			if (encontrado) return -1;
+			else {
+			*modo = 1;encontrado = 1;
+			}
 		}
-		else if ((strncmp(args[i],"-I",2) == 0) && (strlen(args[i]) == 2)) {
-			*modo = 0; aux = 0; break;
+		else if (strncmp(args[i],"-I",2) == 0) {
+			if (encontrado) return -1;
+			else {
+				*modo = 0;encontrado = 1;
+			}
 		}
-	}
-	return aux;
+
+	return encontrado;
 }
 
 /*--------------------------------------------------------------------------
@@ -129,8 +158,13 @@ int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 
 	return flag;
 }
-//Iniciamos las probabilidades de forma equiprobable,
-//las guardamos en una tabla de propabilidades
+/*--------------------------------------------------------------------------
+Iniciamos las probabilidades de forma equiprobable,
+guardandolas en una tabla de propabilidades
+- Entrada:
+	* Puntero a la estructura de Probabilidades
+	* Numero de elementos
+--------------------------------------------------------------------------*/
 void iniProbsIguales(struct TABLA_PROBS* p, int m) {
 	int i;
 	
@@ -140,8 +174,13 @@ void iniProbsIguales(struct TABLA_PROBS* p, int m) {
 	
 	p->condicionadas = NULL;
 }
-//Iniciamos las probabilidades de forma NO equiprobable,
-//las guardamos en una tabla de propabilidades
+/*--------------------------------------------------------------------------
+Iniciamos las probabilidades de forma NO equiprobable,
+guardandolas en una tabla de propabilidades
+- Entrada:
+	* Puntero a la estructura de Probabilidades
+	* Numero de elementos
+--------------------------------------------------------------------------*/
 void iniProbsRandom(struct TABLA_PROBS* p, int m) {
 	int i;
 	double total = 0;
@@ -154,19 +193,38 @@ void iniProbsRandom(struct TABLA_PROBS* p, int m) {
 	
 	p->condicionadas = NULL;
 }
-//Reservamos memoria para el resultado
+/*--------------------------------------------------------------------------
+Reservamos memoria para el resultado
+- Entrada:
+	* Puntero a la estructura de Probabilidades
+	* Numero de elementos
+--------------------------------------------------------------------------*/
 void iniTablaProbs(struct TABLA_PROBS* p, int m) {
 	int i, j;
 	
-	p->m = m;//Pegamos el tamanyo de alfabeto
+	p->m = m;//Anyadimos el tamanyo de alfabeto
 	p->probabilidades = malloc(sizeof(double) * m);
 	p->condicionadas = malloc(sizeof(double*) * m);
 	for (i = 0; i < m; i++) p->condicionadas[i] = malloc(sizeof(double) * m);
 	for (i = 0; i < m; ++i) p->probabilidades[i] = 0;
 	for (i = 0; i < m; ++i) for (j = 0; j < m; ++j) p->condicionadas[i][j] = 0;
 }
+/*--------------------------------------------------------------------------
+Dada una estructura de probabilidades con la frecuencia de cada valor de la clave y
+dado un texto plano, genera un texto cifrado y obtiene las probabilidades condicionales
+de los elementos del alfabeto del texto plano con respecto a los elementos del texto cifrado.
 
-int obtainprobabilidades(struct TABLA_PROBS* resultado, FILE* fentrada, struct TABLA_PROBS* probs, int repeticiones) {
+- Entrada:
+	* Estructura de probablidades donde guardar las probabilidades condicioneses y con 
+	las probabilidades de los elementos del texto plano.
+	* Fichero con el texto plano
+	* Tabla con la frecuencia de los elementos
+	* Repeticiones
+- Salida:
+	* -1 si ocurre algun error
+	* 0 si todo va bien
+--------------------------------------------------------------------------*/
+int obtenerprobabilidades(struct TABLA_PROBS* resultado, FILE* fentrada, struct TABLA_PROBS* probs, int repeticiones) {
 	
 	int i,j;
 	int m = probs->m;//Tam alfabeto
@@ -210,12 +268,18 @@ int obtainprobabilidades(struct TABLA_PROBS* resultado, FILE* fentrada, struct T
 	for (i=0; i < m; ++i) resultado->probabilidades[i] /= aux;
 	for (i=0; i < m; ++i) for (j=0; j < m; ++j) resultado->condicionadas[i][j] = frecuenciaCifrado[j]? resultado->condicionadas[i][j]/frecuenciaCifrado[j]:0;
 	
-	//liberamos la memoria que hemos usaado en la funcion
+	//Liberamos la memoria que hemos usado en la funcion
 	free(frecuenciaCifrado);
 	free(pCifrado.probabilidades);
 	return 0;
 }
-//Escribe la estructura probabilidades
+/*--------------------------------------------------------------------------
+Escribe la estructura probabilidades
+- Entrada:
+	* Fichero donde se escribe
+	* Puntero a la estructura de Probabilidades
+	* Numero de elementos
+--------------------------------------------------------------------------*/
 void imprimirProbabilidades(FILE* f, struct TABLA_PROBS* p) {
 	int i,j;
 	int m = p->m;
@@ -229,13 +293,22 @@ void imprimirProbabilidades(FILE* f, struct TABLA_PROBS* p) {
 		}
 	}
 }
-//c = x mod m
+/*--------------------------------------------------------------------------
+Obtiene el valor entero de un caracter, realizandolo modulo m
+- Entrada:
+	* Caracter c
+	* Modulo m
+--------------------------------------------------------------------------*/
 int getCharPlano(char c, int m) {
 	if ((c >= 'A') && (c <= 'A' + m - 1)) return c - 'A';
 	else if ((c >= 'a') && (c <= 'a' + m - 1)) return c - 'a';
 	else return -1;
 }
-//Obtiene una clave aleatoria de una distribucion de frecuencia	
+/*--------------------------------------------------------------------------
+Obtiene una clave aleatoria de una distribucion de frecuencia	
+- Entrada:
+	* Puntero a la estructura de Probabilidades
+--------------------------------------------------------------------------*/
 int claveAleatoria(struct TABLA_PROBS* probs) {
 	double value;
 	int i;
@@ -246,7 +319,11 @@ int claveAleatoria(struct TABLA_PROBS* probs) {
 	}
 	return probs->m - 1;
 }
-//Liberamos memoria
+/*--------------------------------------------------------------------------
+Liberamos memoria
+- Entrada:
+	* Puntero a la estructura de Probabilidades a liberar
+--------------------------------------------------------------------------*/
 void freeprobabilidades(struct TABLA_PROBS* p) {
 	int i;
 	
