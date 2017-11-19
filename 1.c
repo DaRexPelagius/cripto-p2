@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
 	struct TABLA_PROBS probs;
 	struct TABLA_PROBS resultado;
 	
-	/* random seed */
+	/* semilla */
 	srand(time(NULL));
 
 	//Comprobamos que los argumentos son los correctos, 2 si no se indican ficheros de entrada y de salida
