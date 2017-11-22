@@ -1,10 +1,10 @@
+
 #include "desCBC.h"
 
 
 /*--------------------------------------------------------------------------
 PARAMETERS
 --------------------------------------------------------------------------*/
-
 /* PC1 "permutation" */
 static const unsigned short PC1[BITS_IN_PC1] = { 
 	57, 49, 41, 33, 25, 17, 9,
@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
 	//Si el programa se ejecuto como encriptacion, encriptamos
 	if (flag == ENCRYPT_FLAG) {
 		if (!flagInput) fprintf(stdout,"Plaintext:\n");
-		textLength = readInput(inputFile,inputFormat,plaintext,MAX_TEXT_LENGTH);
+		textLength = leerEntrada(inputFile,inputFormat,plaintext,MAX_TEXT_LENGTH);
 		padding(plaintext,&textLength,blockSize,PADDING_CHAR);
 		CFBmode(flag,plaintext,ciphertext,textLength,&parameters);
 		if (!flagOutput) fprintf(stdout,"Ciphertext:\n");
@@ -258,7 +258,7 @@ int main(int argc, char** argv) {
 	//Si el programa se ejecuto como desencriptacion, desencriptamos
 	else if (flag == DECRYPT_FLAG) {
 		if (!flagInput) fprintf(stdout,"Ciphertext:\n");
-		textLength = readInput(inputFile,inputFormat,ciphertext,MAX_TEXT_LENGTH);
+		textLength = leerEntrada(inputFile,inputFormat,ciphertext,MAX_TEXT_LENGTH);
 		CFBmode(flag,plaintext,ciphertext,textLength,&parameters);
 		if (!flagOutput) fprintf(stdout,"Plaintext:\n");
 		printOutput(outputFile,outputFormat,plaintext,textLength);
@@ -275,18 +275,18 @@ int getArgs(int nArgs, char** args, int* flag, char* keyBuffer, int* blockSize, 
 	if (getFlag(nArgs,args,flag) != 1)
 		return -1;
 	if ((*flag) == DECRYPT_FLAG) {
-		if (getString(nArgs,args,keyBuffer,"-k",2) != 1)
+		if (getCadena(nArgs,args,keyBuffer,"-k",2) != 1)
 			return ERR_FLAGS;
 	}
-	if (getInteger(nArgs,args,blockSize,"-s",2) != 1)
+	if (getEntero(nArgs,args,blockSize,"-s",2) != 1)
 		return ERR_FLAGS;
-	if (getString(nArgs,args,ivBuffer,"-iv",3) != 1)
+	if (getCadena(nArgs,args,ivBuffer,"-iv",3) != 1)
 		return ERR_FLAGS;
-	if (getInteger(nArgs,args,ivLength,"-l",2) != 1)
+	if (getEntero(nArgs,args,ivLength,"-l",2) != 1)
 		return ERR_FLAGS;
-	if (getFormat(nArgs,args,inputFormat,"-if",3) != 1)
+	if (getFormato(nArgs,args,inputFormat,"-if",3) != 1)
 		return ERR_FLAGS;
-	if (getFormat(nArgs,args,outputFormat,"-of",3) != 1)
+	if (getFormato(nArgs,args,outputFormat,"-of",3) != 1)
 		return ERR_FLAGS;
 
 	if ((((*flag) == ENCRYPT_FLAG) && (nArgs == 8)) || (((*flag) == DECRYPT_FLAG) && (nArgs == 10))) {
@@ -294,9 +294,9 @@ int getArgs(int nArgs, char** args, int* flag, char* keyBuffer, int* blockSize, 
 		*flagOutput = 0;
 	}
 	else {
-		if (((*flagInput) = getString(nArgs,args,inputFileName,"-i",2)) == -1)
+		if (((*flagInput) = getCadena(nArgs,args,inputFileName,"-i",2)) == -1)
 			return ERR_FLAGS;
-		if (((*flagOutput) = getString(nArgs,args,outputFileName,"-o",2)) == -1)
+		if (((*flagOutput) = getCadena(nArgs,args,outputFileName,"-o",2)) == -1)
 			return ERR_FLAGS;
 		if (((((*flag) == ENCRYPT_FLAG) && (nArgs == 14)) || (((*flag) == DECRYPT_FLAG) && (nArgs == 16))) && (*flagInput + *flagOutput != 1))
 			return ERR_FLAGS;
@@ -306,45 +306,68 @@ int getArgs(int nArgs, char** args, int* flag, char* keyBuffer, int* blockSize, 
 
 	return 0;
 }
-
-int getInteger(int nArgs, char** args, int* integer, char* flag, int flagLength) {
+/*--------------------------------------------------------------------------
+Obtiene un entero
+- Entrada:
+	* Número de argumentos
+	* Array de argumentos
+	* Puntero al entero
+	* Puntero al modo
+	* Longitud de la cadena
+- Salida:
+	* -1 si ocurre algun error
+	* 1 si va bien
+--------------------------------------------------------------------------*/
+int getEntero(int nArgs, char** args, int* integer, char* modo, int longitud) {
 
 	int i;
-	int found = 0;
+	int flag = 0;
 
-	for (i=1; i<=nArgs-2; i++)
-		if ((strncmp(args[i],flag,flagLength) == 0) && (strlen(args[i]) == flagLength)) {
-			if (found)
-				return -1;
+	for (i=1; i <= (nArgs - 2); i++){
+				
+		if ((strncmp(args[i],modo,longitud) == 0) && (strlen(args[i]) == longitud)) {
+			if (flag) return -1;
 			else {
 				*integer = atoi(args[i+1]);
-				if ((*integer == 0) && !isdigit(args[i+1][0]))
-					return -1;
-				found = 1;
+				if ((*integer == 0) && !isdigit(args[i+1][0])) return -1;
+				flag = 1;
 			}
-		}
+		}}
 
-	return found;
+	return flag;
 }
-
-int getString(int nArgs, char** args, char* string, char* flag, int flagLength) {
+/*--------------------------------------------------------------------------
+Obtiene una cadena
+- Entrada:
+	* Número de argumentos
+	* Array de argumentos
+	* Puntero a la cadena
+	* Puntero al modo
+	* Longitud de la cadena
+- Salida:
+	* -1 si ocurre algun error
+	* 1 si va bien
+--------------------------------------------------------------------------*/
+int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 
 	int i;
-	int found = 0;
+	int flag = 0;
 
-	for (i=1; i<=nArgs-2; i++)
-		if ((strncmp(args[i],flag,flagLength) == 0) && (strlen(args[i]) == flagLength)) {
-			if (found)
+	for (i = 1; i <= (nArgs - 2); i++)
+		if ((strncmp(args[i], modo, longitud) == 0) && (strlen(args[i]) == longitud)) {
+			if (flag)
 				return -1;
 			else {
-				strcpy(string,args[i+1]);
-				found = 1;
+				strcpy(cadena, args[i+1]);
+				flag = 1;
 			}
 		}
 
-	return found;
+	return flag;
 }
-int getFormat(int nArgs, char** args, char* format, char* flag, int flagLength) {
+
+/////////////////////FALTA CABECERA
+int getFormato(int nArgs, char** args, char* format, char* flag, int flagLength) {
 
 	int i;
 	int found = 0;
@@ -379,22 +402,21 @@ void printOutput(FILE* outputFile, char format, char* text, int textLength) {
 	int i;
 	char hex[2];
 
-	if (format == ASCII_FORMAT)
-		for (i=0; i<textLength; i++)
-			fputc(text[i],outputFile);
-	else if (format == HEX_FORMAT)
+	if (format == ASCII_FORMAT) for (i=0; i<textLength; i++) fputc(text[i],outputFile);
+	else if (format == HEX_FORMAT) {
 		for (i=0; i<textLength; i++) {
 			charToHex(hex,text[i]);
 			fputc(hex[0],outputFile);
 			fputc(hex[1],outputFile);
 		}
+	}
 
 	fputc('\n',outputFile);
 }
 
 void padding(char* text, int* textLength, int number, char padChar) {
 
-	while ((*textLength)*8 % number != 0)
+	while ((*textLength) * 8 % number != 0)
 		text[(*textLength)++] = padChar;
 }
 
@@ -428,7 +450,7 @@ void printKey(FILE* outputFile, DESblock* key) {
 	printHexaBlock(outputFile,key,DES_KEY_SIZE,"Key = ");
 }
 
-int readInput(FILE* inputFile, char format, char* text, int maxLength) {
+int leerEntrada(FILE* inputFile, char format, char* text, int maxLength) {
 
 	char c;
 	uint8_t auxC;
@@ -483,7 +505,7 @@ void CFBmode(int flag, char* plaintext, char* ciphertext, int textLength, CFBpar
 	int i;
 	int l = parameters->ivLength;
 	int s = parameters->blockSize;
-	int nBlocks = textLength*8/s;
+	int nBlocks = textLength * 8 / s;
 
 	/* Initial shift register content */
 	for (i=1; i<=DES_BLOCK_SIZE-l; i++)
@@ -877,6 +899,26 @@ void SBox(DESblock* new, DESblock* old) {
 
 void permutation(DESblock* new, DESblock* old) {
 	selectDES(new, old, P, BITS_IN_P);
+}
+
+void hexToChar(uint8_t* c, char* hex) {
+
+	/* Least significant four bits */
+	if ((hex[1] >= '0') && (hex[1] <= '9'))
+		(*c) = hex[1] - '0';
+	else if ((hex[1] >= 'A') && (hex[1] <= 'F'))
+		(*c) = hex[1] + 10 - 'A';
+	else if ((hex[1] >= 'a') && (hex[1] <= 'f'))
+		(*c) = hex[1] + 10 - 'a';
+
+	/* Most significant four bits */
+	if ((hex[0] >= '0') && (hex[0] <= '9'))
+		(*c) += 16*(hex[0] - '0');
+	else if ((hex[0] >= 'A') && (hex[0] <= 'F'))
+		(*c) += 16*(hex[0] + 10 - 'A');
+	else if ((hex[0] >= 'a') && (hex[0] <= 'f'))
+		(*c) += 16*(hex[0] + 10 - 'a');
+
 }
 
 

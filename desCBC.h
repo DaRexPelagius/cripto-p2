@@ -53,23 +53,31 @@ typedef struct {
 	uint8_t block[DES_BLOCK_SIZE+1];	/* block[0] is never used */
 } DESblock;
 
+typedef struct {
+	DESblock key;
+	DESblock SR;
+	DESblock IV;
+	int ivLength;
+	int blockSize;
+} CFBparameters;
+
 
 int getArgs(int nArgs, char** args, int* flag, char* keyBuffer, int* blockSize, char* ivBuffer, int* ivLength, char* inputFormat, char* outputFormat, char* inputFileName, int* flagInput, char* outputFileName, int* flagOutput);
-int getInteger(int nArgs, char** args, int* integer, char* flag, int flagLength);
-int getString(int nArgs, char** args, char* string, char* flag, int flagLength);
-int getFormat(int nArgs, char** args, char* format, char* flag, int flagLength);
+int getEntero(int nArgs, char** args, int* integer, char* flag, int flagLength);
+int getCadena(int nArgs, char** args, char* string, char* flag, int flagLength);
+int getFormato(int nArgs, char** args, char* format, char* flag, int flagLength);
 void printOutput(FILE* outputFile, char format, char* text, int textLength);
 int initCFB(char* keyBuffer, char* ivBuffer, int ivLength, int blockSize, CFBparameters* parameters);
 void padding(char* text, int* textLength, int number, char padChar);
 void printOutput(FILE* outputFile, char format, char* text, int textLength);
-int readInput(FILE* inputFile, char format, char* text, int maxLength);
+int leerEntrada(FILE* inputFile, char format, char* text, int maxLength);
 void printKey(FILE* outputFile, DESblock* key);
-void CFBmode(int flag, char* plaintext, char* ciphertext, int textLength, CFBparameters* parameters)
+void CFBmode(int flag, char* plaintext, char* ciphertext, int textLength, CFBparameters* parameters);
 int validKey(DESblock* key);
 int hexaToBlock(DESblock* newBlock, char* string, int length);
 void charToHex(char* hex, uint8_t c);
 void newKey(DESblock* key);
-void printHexaBlock(FILE* outputFile, DESblock* b, int blockSize, char* text);void hexToChar(uint8_t* c, char* hex);
+void printHexaBlock(FILE* outputFile, DESblock* b, int blockSize, char* text);
 void hexToChar(uint8_t* c, char* hex);
 void textToBlock(DESblock* b, char* text, int blockSize);
 void CFBstep(int flag, DESblock* plainBlock, DESblock* cipherBlock, CFBparameters* parameters);
@@ -93,3 +101,4 @@ void invInitialPerm(DESblock* new, DESblock* old);
 void selectDES(DESblock* new, DESblock* old, const unsigned short* indices, int length);
 void expansion(DESblock* new, DESblock* old);
 void SBox(DESblock* new, DESblock* old);
+void hexToChar(uint8_t* c, char* hex);
