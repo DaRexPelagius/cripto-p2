@@ -3,7 +3,7 @@
 
 
 /*--------------------------------------------------------------------------
-PARAMETERS
+cbc
 --------------------------------------------------------------------------*/
 /* PC1 "permutation" */
 static const unsigned short PC1[BITS_IN_PC1] = { 
@@ -29,12 +29,12 @@ static const unsigned short PC2[BITS_IN_PC2] = {
 	46, 42, 50, 36, 29, 32
 };
 
-/* Shifts in each of the key halves in each round (for encryption) */
+/* Shifts in each of the clave halves in each round (for encryption) */
 static const unsigned short ROUND_SHIFTS[NUM_ROUNDS] = {
 	1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
 };
 
-/* Shifts in each of the key halves in each round (for decryption) */
+/* Shifts in each of the clave halves in each round (for decryption) */
 static const unsigned short ROUND_SHIFTS_DEC[NUM_ROUNDS] = {
 	0, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
 };
@@ -144,20 +144,19 @@ static const unsigned short S_BOXES[NUM_S_BOXES][ROWS_PER_SBOX][COLUMNS_PER_SBOX
 
 int main(int argc, char** argv) {
 
-	int flag,blockSize,ivLength;
-	char inputFormat,outputFormat;
-	int flagInput,flagOutput;
-	char keyBuffer[BUFFER_SIZE];
-	char ivBuffer[BUFFER_SIZE];
-	char inputFileName[MAX_NAME_LENGTH];
-	char outputFileName[MAX_NAME_LENGTH];
-	FILE* inputFile = NULL;
-	FILE* outputFile = NULL;
-	CFBparameters parameters;
-	char plaintext[MAX_TEXT_LENGTH];
-	char ciphertext[MAX_TEXT_LENGTH];
-	int textLength;
-	int initRet;
+	int flag, tamBloque, lenVecIni, entrada, salida;
+	int lon;
+	int aux;
+	char formatoEntrada, formatoSalida;
+	char clave[MAX_BUFFER];
+	char bufferVecIni[MAX_BUFFER];
+	char ficheroentrada[MAX_NOMBRE];
+	char ficherosalida[MAX_NOMBRE];
+	FILE* fentrada = NULL;
+	FILE* fsalida = NULL;
+	CBC cbc;
+	char textoplano[MAX_TEXTO];
+	char textocifrado[MAX_TEXTO];
 
 	//Comprobamos que los argumentos son los correctos
 	if ((argc != 12) && (argc != 14) && (argc != 16) && (argc != 18)){
@@ -166,7 +165,7 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 	//Como en la practica anterior usamos una funcion auxiliar para conseguir los argumentos
-	if (getArgs(argc, argv, &flag, keyBuffer, &blockSize, ivBuffer, &ivLength, &inputFormat, &outputFormat, inputFileName, &flagInput, outputFileName, &flagOutput) == -1) {
+	if (getArgs(argc, argv, &flag, clave, &tamBloque, bufferVecIni, &lenVecIni, &formatoEntrada, &formatoSalida, ficheroentrada, &entrada, ficherosalida, &salida) == -1) {
 		printf("Argumentos incorrectos.\n");
 		printf("Uso del programa: ./1 {-P | -I} [-i filein] [-o fileout].\n");
 		return -1;
@@ -175,33 +174,33 @@ int main(int argc, char** argv) {
 	//Ahora vamos a comprar que los argumentos del DES sean correctos..
 
 	//Tamanyo de bloque entre los limites
-	if ((blockSize < 1) || (blockSize > DES_BLOCK_SIZE)) {
-		fprintf(stderr,"ERROR: Block size must be between 1 and %d\n",DES_BLOCK_SIZE);
+	if ((tamBloque < 1) || (tamBloque > TAM_BLOQUE)) {
+		fprintf(stderr,"ERROR: Block size must be between 1 and %d\n",TAM_BLOQUE);
 		return -1;
 	}
 	//Tamanyo de bloque multiplo de 8
-	if ((blockSize%8) != 0) {
+	if ((tamBloque % 8) != 0) {
 		fprintf(stderr,"ERROR: Block size must be a multiple of 8\n");
 		return -1;
 	}
 	//Vector de inicializacion correcto
-	if ((ivLength < 1) || (ivLength > blockSize)) {
-		fprintf(stderr,"ERROR: IV length must be between 1 and %d\n",blockSize);
+	if ((lenVecIni < 1) || (lenVecIni > tamBloque)) {
+		fprintf(stderr,"ERROR: IV length must be between 1 and %d\n",tamBloque);
 		return -1;
 	}
 	//Vector de inicializacion multiplo de 8
-	if ((ivLength%4) != 0) {
+	if ((lenVecIni % 4) != 0) {
 		fprintf(stderr,"ERROR: IV length must be a multiple of 4\n");
 		return -1;
 	}
 	//Comprobamos que el archivo de entrada esta en un lenguaje que entendamos
-	if ((inputFormat != HEX_FORMAT) && (inputFormat != ASCII_FORMAT)) {
-		fprintf(stderr,"ERROR: Wrong input format\n");
+	if ((formatoEntrada != FORMATO_HEX) && (formatoEntrada != FORMATO_ASCII)) {
+		fprintf(stderr,"ERROR: Wrong input formato\n");
 		return -1;
 	}
 	//Comprobamos que el lenguaje de salida lo conocemos
-	if ((outputFormat != HEX_FORMAT) && (outputFormat != ASCII_FORMAT)) {
-		fprintf(stderr,"ERROR: Wrong input format\n");
+	if ((formatoSalida != FORMATO_HEX) && (formatoSalida != FORMATO_ASCII)) {
+		fprintf(stderr,"ERROR: Wrong input formato\n");
 		return -1;
 	}
 	
@@ -222,46 +221,35 @@ int main(int argc, char** argv) {
 	} else fsalida = stdout;
 
 	//Preparamos la estructura DES
-	if (flag == ENCRYPT_FLAG) initRet = initCFB(NULL, ivBuffer, ivLength, blockSize, &parameters);
-	else initRet = initCFB(keyBuffer, ivBuffer, ivLength, blockSize, &parameters);
+	if (flag == 1) aux = prepararCBC(NULL, bufferVecIni, lenVecIni, tamBloque, &cbc);
+	else aux = prepararCBC(clave, bufferVecIni, lenVecIni, tamBloque, &cbc);
 	
-	if (initRet != 0) {
-		switch (initRet) {
-			case ERR_KEY_FORMAT:
-				fprintf(stderr,"ERROR: Wrong DES key format\n");
-				break;
-			case ERR_KEY:
-				fprintf(stderr,"ERROR: Wrong DES key\n");
-				break;
-			case ERR_IV_FORMAT:
-				fprintf(stderr,"ERROR: Wrong DES initialisation vector for CFB mode\n");
-				break;
-		}
+	if (aux != 0) {
 		if (fentrada) fclose(fentrada);
 		if (fsalida) fclose(fsalida);
 		return -1;
 	}
 
 	//Imprimimos la clave de Encriptacion 
-	if (flag == ENCRYPT_FLAG) printKey(stdout,&(parameters.key));
+	if (flag == 1) imprimirClave(stdout, &(cbc.clave));
 
 	//Si el programa se ejecuto como encriptacion, encriptamos
-	if (flag == ENCRYPT_FLAG) {
-		if (!flagInput) fprintf(stdout,"Plaintext:\n");
-		textLength = leerEntrada(inputFile,inputFormat,plaintext,MAX_TEXT_LENGTH);
-		padding(plaintext,&textLength,blockSize,PADDING_CHAR);
-		CFBmode(flag,plaintext,ciphertext,textLength,&parameters);
-		if (!flagOutput) fprintf(stdout,"Ciphertext:\n");
-		printOutput(outputFile,outputFormat,ciphertext,textLength);
+	if (flag == 1) {
+		if (!entrada) fprintf(stdout, "textoplano:\n");
+		lon = leerEntrada(fentrada, formatoEntrada, textoplano, MAX_TEXTO);
+		padding(textoplano, &lon, tamBloque, PADDING_CHAR);
+		CFBmode(flag, textoplano, textocifrado, lon, &cbc);
+		if (!salida) fprintf(stdout, "textocifrado:\n");
+		imprimirSalida(fsalida, formatoSalida, textocifrado, lon);
 	}
 
 	//Si el programa se ejecuto como desencriptacion, desencriptamos
-	else if (flag == DECRYPT_FLAG) {
-		if (!flagInput) fprintf(stdout,"Ciphertext:\n");
-		textLength = leerEntrada(inputFile,inputFormat,ciphertext,MAX_TEXT_LENGTH);
-		CFBmode(flag,plaintext,ciphertext,textLength,&parameters);
-		if (!flagOutput) fprintf(stdout,"Plaintext:\n");
-		printOutput(outputFile,outputFormat,plaintext,textLength);
+	else if (flag == 2) {
+		if (!entrada) fprintf(stdout,"textocifrado:\n");
+		lon = leerEntrada(fentrada,formatoEntrada,textocifrado,MAX_TEXTO);
+		CFBmode(flag,textoplano,textocifrado,lon,&cbc);
+		if (!salida) fprintf(stdout,"textoplano:\n");
+		imprimirSalida(fsalida,formatoSalida,textoplano,lon);
 	}
 
 	if (fentrada) fclose(fentrada);
@@ -270,38 +258,27 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
-int getArgs(int nArgs, char** args, int* flag, char* keyBuffer, int* blockSize, char* ivBuffer, int* ivLength, char* inputFormat, char* outputFormat, char* inputFileName, int* flagInput, char* outputFileName, int* flagOutput) {
+int getArgs(int nArgs, char** args, int* flag, char* clave, int* tamBloque, char* bufferVecIni, int* lenVecIni, char* formatoEntrada, char* formatoSalida, char* ficheroentrada, int* entrada, char* ficherosalida, int* salida) {
 
-	if (getFlag(nArgs,args,flag) != 1)
-		return -1;
-	if ((*flag) == DECRYPT_FLAG) {
-		if (getCadena(nArgs,args,keyBuffer,"-k",2) != 1)
-			return ERR_FLAGS;
+	if (getModo(nArgs, args, flag) != 1) return -1;
+	if ((*flag) == 2) {
+		if (getCadena(nArgs, args, clave, "-k", 2) != 1) return -1;
 	}
-	if (getEntero(nArgs,args,blockSize,"-s",2) != 1)
-		return ERR_FLAGS;
-	if (getCadena(nArgs,args,ivBuffer,"-iv",3) != 1)
-		return ERR_FLAGS;
-	if (getEntero(nArgs,args,ivLength,"-l",2) != 1)
-		return ERR_FLAGS;
-	if (getFormato(nArgs,args,inputFormat,"-if",3) != 1)
-		return ERR_FLAGS;
-	if (getFormato(nArgs,args,outputFormat,"-of",3) != 1)
-		return ERR_FLAGS;
+	if (getEntero(nArgs, args, tamBloque, "-s", 2) != 1) return -1;
+	if (getCadena(nArgs, args, bufferVecIni, "-iv", 3) != 1) return -1;
+	if (getEntero(nArgs, args, lenVecIni, "-l", 2) != 1) return -1;
+	if (getFormato(nArgs, args, formatoEntrada, "-if", 3) != 1) return -1;
+	if (getFormato(nArgs, args, formatoSalida, "-of", 3) != 1) return -1;
 
-	if ((((*flag) == ENCRYPT_FLAG) && (nArgs == 8)) || (((*flag) == DECRYPT_FLAG) && (nArgs == 10))) {
-		*flagInput = 0;
-		*flagOutput = 0;
+	if ((((*flag) == 1) && (nArgs == 8)) || (((*flag) == 2) && (nArgs == 10))) {
+		*entrada = 0;
+		*salida = 0;
 	}
 	else {
-		if (((*flagInput) = getCadena(nArgs,args,inputFileName,"-i",2)) == -1)
-			return ERR_FLAGS;
-		if (((*flagOutput) = getCadena(nArgs,args,outputFileName,"-o",2)) == -1)
-			return ERR_FLAGS;
-		if (((((*flag) == ENCRYPT_FLAG) && (nArgs == 14)) || (((*flag) == DECRYPT_FLAG) && (nArgs == 16))) && (*flagInput + *flagOutput != 1))
-			return ERR_FLAGS;
-		if (((((*flag) == ENCRYPT_FLAG) && (nArgs == 16)) || (((*flag) == DECRYPT_FLAG) && (nArgs == 18))) && (*flagInput + *flagOutput != 2))
-			return ERR_FLAGS;
+		if (((*entrada) = getCadena(nArgs, args, ficheroentrada, "-i", 2)) == -1) return -1;
+		if (((*salida) = getCadena(nArgs, args, ficherosalida, "-o", 2)) == -1) return -1;
+		if (((((*flag) == 1) && (nArgs == 14)) || (((*flag) == 2) && (nArgs == 16))) && (*entrada + *salida != 1)) return -1;
+		if (((((*flag) == 1) && (nArgs == 16)) || (((*flag) == 2) && (nArgs == 18))) && (*entrada + *salida != 2)) return -1;
 	}
 
 	return 0;
@@ -318,18 +295,18 @@ Obtiene un entero
 	* -1 si ocurre algun error
 	* 1 si va bien
 --------------------------------------------------------------------------*/
-int getEntero(int nArgs, char** args, int* integer, char* modo, int longitud) {
+int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud) {
 
 	int i;
 	int flag = 0;
 
 	for (i=1; i <= (nArgs - 2); i++){
 				
-		if ((strncmp(args[i],modo,longitud) == 0) && (strlen(args[i]) == longitud)) {
+		if ((strncmp(args[i], modo, longitud) == 0) && (strlen(args[i]) == longitud)) {
 			if (flag) return -1;
 			else {
-				*integer = atoi(args[i+1]);
-				if ((*integer == 0) && !isdigit(args[i+1][0])) return -1;
+				*entero = atoi(args[i+1]);
+				if ((*entero == 0) && !isdigit(args[i + 1][0])) return -1;
 				flag = 1;
 			}
 		}}
@@ -365,190 +342,202 @@ int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 
 	return flag;
 }
-
-/////////////////////FALTA CABECERA
-int getFormato(int nArgs, char** args, char* format, char* flag, int flagLength) {
+/*--------------------------------------------------------------------------
+Obtiene el modo
+- Entrada:
+	* Número de argumentos
+	* Array de argumentos
+	* Puntero al modo
+- Salida:
+	* -1 si ocurre algun error
+	* 1 si va bien
+--------------------------------------------------------------------------*/
+int getModo(int nArgs, char** args, int* modo) {
 
 	int i;
-	int found = 0;
+	int flag = 0;
 
-	for (i=1; i<=nArgs-2; i++)
-		if ((strncmp(args[i],flag,flagLength) == 0) && (strlen(args[i]) == flagLength)) {
-			if (found)
-				return -1;
+	for (i = 1; i < nArgs; i++){
+		if ((strncmp(args[i], "-C", 2) == 0) && (strlen(args[i]) == 2)) {
+			if (flag) return -1;
 			else {
-				if ((strlen(args[i+1]) == 1) && (args[i+1][0] == HEX_FORMAT)) {
-					*format = HEX_FORMAT;
-					found = 1;
-				}
-				else if ((strlen(args[i+1]) == 1) && (args[i+1][0] == BIN_FORMAT)) {
-					*format = BIN_FORMAT;
-					found = 1;
-				}
-				else if ((strlen(args[i+1]) == 1) && (args[i+1][0] == ASCII_FORMAT)) {
-					*format = ASCII_FORMAT;
-					found = 1;
-				}
-				else
-					return -1;
+				*modo = 1;
+				flag = 1;
 			}
 		}
+		else if (strncmp(args[i],"-D",2) == 0) {
+			if (flag) return -1;
+			else {
+				*modo = 2;
+				flag = 1;
+			}
+		}
+	}
+	return flag;
+}
+/////////////////////FALTA CABECERA
+int getFormato(int nArgs, char** args, char* formato, char* modo, int flagLength) {
 
-	return found;
+	int i;
+	int aux = 0;
+
+	for (i=1; i<=nArgs-2; i++){
+		if ((strncmp(args[i], modo, flagLength) == 0) && (strlen(args[i]) == flagLength)) {
+			if (aux) return -1;
+			else {
+				if ((strlen(args[i + 1]) == 1) && (args[i + 1][0] == FORMATO_HEX)) {
+					*formato = FORMATO_HEX;
+					aux = 1;
+				} else if ((strlen(args[i + 1]) == 1) && (args[i + 1][0] == FORMATO_BIN)) {
+					*formato = FORMATO_BIN;
+					aux = 1;
+				} else if ((strlen(args[i + 1]) == 1) && (args[i + 1][0] == FORMATO_ASCII)) {
+					*formato = FORMATO_ASCII;
+					aux = 1;
+				} else return -1;
+			}
+		}
+	}
+	return aux;
 }
 
-void printOutput(FILE* outputFile, char format, char* text, int textLength) {
+void imprimirSalida(FILE* fsalida, char formato, char* texto, int lon) {
 
 	int i;
 	char hex[2];
-
-	if (format == ASCII_FORMAT) for (i=0; i<textLength; i++) fputc(text[i],outputFile);
-	else if (format == HEX_FORMAT) {
-		for (i=0; i<textLength; i++) {
-			charToHex(hex,text[i]);
-			fputc(hex[0],outputFile);
-			fputc(hex[1],outputFile);
+	//Si el formato es ASCII imprimimos tal cual
+	if (formato == FORMATO_ASCII) for (i = 0; i < lon; i++) fputc(texto[i], fsalida);
+	else if (formato == FORMATO_HEX) {//Sino transformamos los chars a digitos hexagonales
+		for (i = 0; i < lon; i++) {
+			char2Hex(hex, texto[i]);
+			fputc(hex[0], fsalida);
+			fputc(hex[1], fsalida);
 		}
 	}
 
-	fputc('\n',outputFile);
+	fputc('\n', fsalida);
 }
 
-void padding(char* text, int* textLength, int number, char padChar) {
+void padding(char* texto, int* lon, int numero, char padChar) {
 
-	while ((*textLength) * 8 % number != 0)
-		text[(*textLength)++] = padChar;
+	while ((*lon) * 8 % numero != 0)	texto[(*lon)++] = padChar;
 }
 
 
-int initCFB(char* keyBuffer, char* ivBuffer, int ivLength, int blockSize, CFBparameters* parameters) {
+int prepararCBC(char* clave, char* bufferVecIni, int lenVecIni, int tamBloque, CBC* cbc) {
 
-	/* Key initialisation and validation */
-	if (keyBuffer) {
-		if (hexaToBlock(&(parameters->key),keyBuffer,DES_KEY_SIZE) == -1)
-			return ERR_KEY_FORMAT;
-		else if (!validKey(&(parameters->key)))
-			return ERR_KEY;
-	}
-	else {
+	//Inicializamos la clave y comprobamos que es valida
+	if (clave) {
+		if (hexaToBlock(&(cbc->clave),clave,TAM_CLAVE) == -1){
+			fprintf(stderr,"ERROR: Error en el formato de la clave.\n");
+			return -1;
+		}else if (!esValida(&(cbc->clave))){
+			fprintf(stderr,"ERROR: Clave no valida.\n");
+			return -1;
+		}
+	} else {//Inicializamos una clave aleatoria
 		srand(time(NULL));
-		newKey(&(parameters->key));
+		newClave(&(cbc->clave));
 	}
 
-	/* IV initialisation and validation */
-	if (hexaToBlock(&(parameters->IV),ivBuffer,ivLength) == -1)
-		return ERR_IV_FORMAT;
-	parameters->ivLength = ivLength;
+	//Preparamos el vector de inicializacion
+	if (hexaToBlock(&(cbc->IV),bufferVecIni,lenVecIni) == -1){
+		fprintf(stderr,"ERROR: Error en el formato del vector de inicializacion.\n");		
+		return -1;
+	}
+	cbc->lenVecIni = lenVecIni;
 
-	/* Block size */
-	parameters->blockSize = blockSize;
+	//Guardamos el tamanyo de bloque
+	cbc->tamBloque = tamBloque;
 
 	return 0;
 }
 
-void printKey(FILE* outputFile, DESblock* key) {
-	printHexaBlock(outputFile,key,DES_KEY_SIZE,"Key = ");
+void imprimirClave(FILE* fsalida, Bloque* clave) {
+	printHexaBlock(fsalida, clave, TAM_CLAVE, "Clave = ");
 }
 
-int leerEntrada(FILE* inputFile, char format, char* text, int maxLength) {
+int leerEntrada(FILE* fentrada, char formato, char* texto, int maxLon) {
 
 	char c;
 	uint8_t auxC;
 	char hex[2];
 	int n = 0;
 
-	if (format == ASCII_FORMAT)
-		while (((c = fgetc(inputFile)) != EOF) && (inputFile != stdin || c != '\n') && (n < maxLength)) {
-			text[n] = c;
+	if (formato == FORMATO_ASCII)
+		while (((c = fgetc(fentrada)) != EOF) && (fentrada != stdin || c != '\n') && (n < maxLon)) {
+			texto[n] = c;
 			n++;
 		}
 
-	else if (format == HEX_FORMAT)
+	else if (formato == FORMATO_HEX)
 
 		while (1) {
 
 			/* Reads first half of the byte */
-			hex[0] = fgetc(inputFile);
+			hex[0] = fgetc(fentrada);
 			while (!isHex(hex[0])) {
 				/* End of input */
-				if ((hex[0] == EOF) || ((inputFile == stdin) && (hex[0] == '\n')))
+				if ((hex[0] == EOF) || ((fentrada == stdin) && (hex[0] == '\n')))
 					return n;
-				hex[0] = fgetc(inputFile);
+				hex[0] = fgetc(fentrada);
 			}
 
 			/* Reads second half of the byte */
-			hex[1] = fgetc(inputFile);
+			hex[1] = fgetc(fentrada);
 			while (!isHex(hex[1])) {
 				/* End of input with an incomplete byte => Padding */
-				if ((hex[1] == EOF) || ((inputFile == stdin) && (hex[1] == '\n'))) {
+				if ((hex[1] == EOF) || ((fentrada == stdin) && (hex[1] == '\n'))) {
 					hex[1] = '0';
 					hexToChar(&auxC,hex);
-					text[n] = auxC;
+					texto[n] = auxC;
 					n++;
 					return n;
 				}
-				hex[1] = fgetc(inputFile);
+				hex[1] = fgetc(fentrada);
 			}
 
 			/* Translates the complete byte */
 			hexToChar(&auxC,hex);
-			text[n] = auxC;
+			texto[n] = auxC;
 			n++;
 		}
 
 	return n;
 }
 
-void CFBmode(int flag, char* plaintext, char* ciphertext, int textLength, CFBparameters* parameters) {
+void CFBmode(int flag, char* textoplano, char* textocifrado, int lon, CBC* cbc) {
 	
-	DESblock plainBlock, cipherBlock;
+	Bloque plainBlock, cipherBlock;
 	int i;
-	int l = parameters->ivLength;
-	int s = parameters->blockSize;
-	int nBlocks = textLength * 8 / s;
+	int l = cbc->lenVecIni;
+	int s = cbc->tamBloque;
+	int nBlocks = lon * 8 / s;
 
 	/* Initial shift register content */
-	for (i=1; i<=DES_BLOCK_SIZE-l; i++)
-		parameters->SR.block[i] = 0;
+	for (i=1; i<=TAM_BLOQUE-l; i++)
+		cbc->SR.block[i] = 0;
 	for (i=1; i<=l; i++)
-		parameters->SR.block[DES_BLOCK_SIZE-l+i] = parameters->IV.block[i];
+		cbc->SR.block[TAM_BLOQUE-l+i] = cbc->IV.block[i];
 
 	/* Encryption/decryption by blocks */
-	if (flag == ENCRYPT_FLAG) {
+	if (flag == 1) {
 		for (i=0; i<nBlocks; i++) {
-			textToBlock(&plainBlock, plaintext + i*s/8, s);
-			CFBstep(flag,&plainBlock,&cipherBlock,parameters);
-			blockToText(ciphertext + i*s/8, &cipherBlock, s);
+			textToBlock(&plainBlock, textoplano + i*s/8, s);
+			CFBstep(flag,&plainBlock,&cipherBlock,cbc);
+			blockToText(textocifrado + i*s/8, &cipherBlock, s);
 		}
 	}
 	else {
 		for (i=0; i < nBlocks; i++) {
-			textToBlock(&cipherBlock, ciphertext + i*s/8, s);
-			CFBstep(flag,&plainBlock,&cipherBlock,parameters);
-			blockToText(plaintext + i*s/8, &plainBlock, s);
+			textToBlock(&cipherBlock, textocifrado + i*s/8, s);
+			CFBstep(flag,&plainBlock,&cipherBlock,cbc);
+			blockToText(textoplano + i*s/8, &plainBlock, s);
 		}
 	}
 }
 
-void printOutput(FILE* outputFile, char format, char* text, int textLength) {
-
-	int i;
-	char hex[2];
-
-	if (format == ASCII_FORMAT)
-		for (i=0; i<textLength; i++)
-			fputc(text[i],outputFile);
-	else if (format == HEX_FORMAT)
-		for (i=0; i<textLength; i++) {
-			charToHex(hex,text[i]);
-			fputc(hex[0],outputFile);
-			fputc(hex[1],outputFile);
-		}
-
-	fputc('\n',outputFile);
-}
-
-void charToHex(char* hex, uint8_t c) {
+void char2Hex(char* hex, uint8_t c) {
 
 	uint8_t bin[8];
 
@@ -557,7 +546,7 @@ void charToHex(char* hex, uint8_t c) {
 	binToHex(hex+1,bin+4);
 }
 
-int hexaToBlock(DESblock* newBlock, char* string, int length) {
+int hexaToBlock(Bloque* newBlock, char* string, int length) {
 
 	int i;
 	
@@ -576,52 +565,67 @@ int hexaToBlock(DESblock* newBlock, char* string, int length) {
 	return 0;
 }
 
-int validKey(DESblock* key) {
+int esValida(Bloque* clave) {
 
 	int byte, bit;
 	int acc;
 
-	for (byte=0; byte<DES_KEY_SIZE/8; byte++) {
+	for (byte = 0; byte < TAM_CLAVE / 8; byte++) {
 		acc = 0;
-		for (bit=0; bit<8; bit++)
-			acc += key->block[8*byte+bit+1];
-		if (acc%2 == 0)
-			return 0;
+		for (bit = 0; bit < 8; bit++) acc += clave->block[8 * byte + bit + 1];
+		if (acc % 2 == 0) return 0;
 	}
 
 	return 1;
 }
 
-void newKey(DESblock* key) {
+void newClave(Bloque* clave) {
 
 	int byte, bit;
 	int acc;
 
-	for (byte=0; byte<DES_KEY_SIZE/8; byte++) {
+	for (byte=0; byte<TAM_CLAVE/8; byte++) {
 		acc = 0;
-		for (bit=0; bit<7; bit++)
-			acc += (key->block[8*byte+bit+1] = randomInt(0,1));
-		key->block[8*byte+7+1] = (acc%2 == 0);
+		for (bit=0; bit<7; bit++) acc += (clave->block[8*byte+bit+1] = naleatorio(0,1));
+		clave->block[8*byte+7+1] = (acc%2 == 0);
 	}
 }
-void printHexaBlock(FILE* outputFile, DESblock* b, int blockSize, char* text) {
+
+int naleatorio(int a, int b) {
+
+	if (a >= b) return a;
+
+	return a + (rand() % (b - a + 1));
+}
+
+void printHexaBlock(FILE* fsalida, Bloque* b, int tamBloque, char* texto) {
 
 	char c;
 	int i, j;
 	uint8_t binBuffer[4];
 
-	if (text)
-		fprintf(outputFile,"%s",text);
-	fprintf(outputFile,"%s","0x");
+	if (texto)
+		fprintf(fsalida,"%s",texto);
+	fprintf(fsalida,"%s","0x");
 
-	for (i=0; i<blockSize/4; i++) {
+	for (i=0; i<tamBloque/4; i++) {
 		for (j=0; j<4; j++)
 			binBuffer[j] = b->block[i*4+j+1];
 		binToHex(&c,binBuffer);
-		fputc(c,outputFile);
+		fputc(c,fsalida);
 	}
-	fputc('\n',outputFile);
+	fputc('\n',fsalida);
 }
+// isHex @ number.c
+int isHex(char hex) {
+
+	if (((hex >= '0') && (hex <= '9')) || ((hex >= 'A') && (hex <= 'F')) || ((hex >= 'a') && (hex <= 'f')))
+		return 1;
+
+	return 0;
+}
+
+
 void hexToChar(uint8_t* c, char* hex) {
 
 	/* Least significant four bits */
@@ -641,50 +645,50 @@ void hexToChar(uint8_t* c, char* hex) {
 		(*c) += 16*(hex[0] + 10 - 'a');
 
 }
-void textToBlock(DESblock* b, char* text, int blockSize) {
+void textToBlock(Bloque* b, char* texto, int tamBloque) {
 
 	int i;
-	int nBytes = blockSize/8;
+	int nBytes = tamBloque/8;
 
 	for (i=0; i<nBytes ; i++)
-		charToBin(b->block + i*8 + 1, text[i]);
+		charToBin(b->block + i*8 + 1, texto[i]);
 }
 
-void CFBstep(int flag, DESblock* plainBlock, DESblock* cipherBlock, CFBparameters* parameters) {
+void CFBstep(int flag, Bloque* plainBlock, Bloque* cipherBlock, CBC* cbc) {
 
-	int s = parameters->blockSize;
-	DESblock outputDES;
+	int s = cbc->tamBloque;
+	Bloque outputDES;
 
 	/* DES algorithm (input from shift register) */
-	DES(&outputDES,&(parameters->SR),&(parameters->key),ENCRYPT_FLAG);
+	DES(&outputDES,&(cbc->SR),&(cbc->clave),1);
 
 	/* XOR with the s most significant bits */
-	if (flag == ENCRYPT_FLAG)
+	if (flag == 1)
 		xorDES(cipherBlock,plainBlock,&outputDES,s);
 	else
 		xorDES(plainBlock,cipherBlock,&outputDES,s);
 
 	/* Shift register ready for the next block */
-	shiftRegister(&(parameters->SR),cipherBlock,s);
+	shiftRegister(&(cbc->SR),cipherBlock,s);
 }
 
-void blockToText(char* text, DESblock* b, int blockSize) {
+void blockToText(char* texto, Bloque* b, int tamBloque) {
 
 	int i;
-	int nBytes = blockSize/8;
+	int nBytes = tamBloque/8;
 
 	for (i=0; i<nBytes; i++)
-		binToChar(((uint8_t*)text)+i,b->block + 8*i + 1);
+		binToChar(((uint8_t*)texto)+i,b->block + 8*i + 1);
 }
 
-void shiftRegister(DESblock* output, DESblock* input, int shift) {
+void shiftRegister(Bloque* output, Bloque* input, int shift) {
 
 	int i;
 
-	for (i=1; i <= DES_BLOCK_SIZE-shift; i++)
+	for (i=1; i <= TAM_BLOQUE-shift; i++)
 		output->block[i] = output->block[i+shift];
 	for (i=1; i <= shift; i++)
-		output->block[i+DES_BLOCK_SIZE-shift] = input->block[i];
+		output->block[i+TAM_BLOQUE-shift] = input->block[i];
 }
 
 void charToBin(uint8_t* bin, uint8_t c) {
@@ -731,11 +735,11 @@ void hexToBin(uint8_t* bin, char hex) {
 	}
 }
 
-void DES(DESblock* output, DESblock* input, DESblock* key, int flag) {
+void DES(Bloque* output, Bloque* input, Bloque* clave, int flag) {
 
-	DESblock oldLeft, oldRight, newLeft, newRight;
-	DESblock ipBlock, rBlock, sBlock;
-	DESblock oldKey, newKey, roundKey;
+	Bloque oldLeft, oldRight, newLeft, newRight;
+	Bloque ipBlock, rBlock, sBlock;
+	Bloque oldKey, newClave, roundKey;
 	int i;
 
 	/* Initial permutation */
@@ -746,19 +750,19 @@ void DES(DESblock* output, DESblock* input, DESblock* key, int flag) {
 	rightSemiBlock(&oldRight,&ipBlock);
 
 	/* Permutation Choice 1 */
-	permChoice1(&oldKey,key);
+	permChoice1(&oldKey,clave);
 
 	/* NUM_ROUNDS rounds */
 	for (i=1; i<= NUM_ROUNDS; i++) {
 
-		LCS(&newKey,&oldKey,i,flag);
-		permChoice2(&roundKey,&newKey);
+		LCS(&newClave,&oldKey,i,flag);
+		permChoice2(&roundKey,&newClave);
 
 		singleRound(&newLeft,&newRight,&oldLeft,&oldRight,&roundKey,i);
 
 		copyBlock(&oldLeft,&newLeft,BITS_IN_FEISTEL/2);
 		copyBlock(&oldRight,&newRight,BITS_IN_FEISTEL/2);
-		copyBlock(&oldKey,&newKey,BITS_IN_PC1);
+		copyBlock(&oldKey,&newClave,BITS_IN_PC1);
 	}
 
 	/* Merges the semiblocks */
@@ -771,7 +775,7 @@ void DES(DESblock* output, DESblock* input, DESblock* key, int flag) {
 	invInitialPerm(output,&sBlock);
 }
 
-void xorDES(DESblock* new, DESblock* old1, DESblock* old2, int length) {
+void xorDES(Bloque* new, Bloque* old1, Bloque* old2, int length) {
 
 	int i;
 
@@ -786,17 +790,17 @@ void binToChar(uint8_t* c, uint8_t* bin) {
 
 	(*c) = 0;
 
-	for (i=7; i>=0; i--) {
-		(*c) += pow*bin[i];
+	for (i = 7; i >= 0; i--) {
+		(*c) += pow * bin[i];
 		pow *= 2;
 	}
 }
 
-void initialPerm(DESblock* new, DESblock* old) {
+void initialPerm(Bloque* new, Bloque* old) {
 	selectDES(new, old, IP, BITS_IN_IP);
 }
 
-void leftSemiBlock(DESblock* semiBlock, DESblock* fullBlock) {
+void leftSemiBlock(Bloque* semiBlock, Bloque* fullBlock) {
 
 	int i;
 
@@ -805,7 +809,7 @@ void leftSemiBlock(DESblock* semiBlock, DESblock* fullBlock) {
 }
 
 
-void rightSemiBlock(DESblock* semiBlock, DESblock* fullBlock) {
+void rightSemiBlock(Bloque* semiBlock, Bloque* fullBlock) {
 
 	int i;
 
@@ -813,29 +817,44 @@ void rightSemiBlock(DESblock* semiBlock, DESblock* fullBlock) {
 		semiBlock->block[i] = fullBlock->block[i+BITS_IN_FEISTEL/2];
 }
 
-void permChoice1(DESblock* new, DESblock* old) {
+void permChoice1(Bloque* new, Bloque* old) {
 	selectDES(new, old, PC1, BITS_IN_PC1);
 }
 
-void LCS(DESblock* new, DESblock* old, int nRound, int flag) {
+void LCS(Bloque* new, Bloque* old, int nRound, int flag) {
 
-	if (flag == ENCRYPT_FLAG)
-		shiftLeftDES(new, old, ROUND_SHIFTS[nRound-1]);
-	else if (flag == DECRYPT_FLAG)
-		shiftRightDES(new, old, ROUND_SHIFTS_DEC[nRound-1]);
+	if (flag == 1) shiftLeftDES(new, old, ROUND_SHIFTS[nRound-1]);
+	else if (flag == 2) shiftRightDES(new, old, ROUND_SHIFTS_DEC[nRound-1]);
 }
 
-void permChoice2(DESblock* new, DESblock* old) {
+//ShiftLeftDES @ Des.c
+void shiftLeftDES(Bloque* new, Bloque* old, int shift) {
+
+	int i;
+
+	for (i=0; i < BITS_MEDIOBLOQUE; i++) new->block[i+1] = old->block[((i+shift)%(BITS_MEDIOBLOQUE)) + 1];
+	for (i=0; i < BITS_MEDIOBLOQUE; i++) new->block[i+BITS_MEDIOBLOQUE+1] = old->block[((i+shift)%(BITS_MEDIOBLOQUE)) + BITS_MEDIOBLOQUE + 1];
+}
+//ShiftRightDES @ Des.c
+void shiftRightDES(Bloque* new, Bloque* old, int shift) {
+
+	int i;
+
+	for (i=0; i < BITS_MEDIOBLOQUE; i++) new->block[i+1] = old->block[((i-shift+BITS_MEDIOBLOQUE)%(BITS_MEDIOBLOQUE)) + 1];
+	for (i=0; i < BITS_MEDIOBLOQUE; i++) new->block[i+BITS_MEDIOBLOQUE+1] = old->block[((i-shift+BITS_MEDIOBLOQUE)%(BITS_MEDIOBLOQUE)) + BITS_MEDIOBLOQUE + 1];
+}
+
+void permChoice2(Bloque* new, Bloque* old) {
 	selectDES(new, old, PC2, BITS_IN_PC2);
 }
 
-void singleRound(DESblock* newLeft, DESblock* newRight, DESblock* oldLeft, DESblock* oldRight, DESblock* key, int nRound) {
+void singleRound(Bloque* newLeft, Bloque* newRight, Bloque* oldLeft, Bloque* oldRight, Bloque* clave, int nRound) {
 
-	DESblock eBlock, xBlock, sBlock, pBlock;
+	Bloque eBlock, xBlock, sBlock, pBlock;
 
 	/* F function */
 	expansion(&eBlock,oldRight);
-	xorDES(&xBlock,&eBlock,key,BITS_IN_E);
+	xorDES(&xBlock,&eBlock,clave,BITS_IN_E);
 	SBox(&sBlock,&xBlock);
 	permutation(&pBlock,&sBlock);
 
@@ -846,7 +865,7 @@ void singleRound(DESblock* newLeft, DESblock* newRight, DESblock* oldLeft, DESbl
 	xorDES(newRight,oldLeft,&pBlock,BITS_IN_P);
 }
 
-void copyBlock(DESblock* new, DESblock* old, int length) {
+void copyBlock(Bloque* new, Bloque* old, int length) {
 
 	int i;
 
@@ -854,7 +873,7 @@ void copyBlock(DESblock* new, DESblock* old, int length) {
 		new->block[i] = old->block[i];
 }
 
-void mergeSemiBlocks(DESblock* fullBlock, DESblock* left, DESblock* right) {
+void mergeSemiBlocks(Bloque* fullBlock, Bloque* left, Bloque* right) {
 
 	int i;
 
@@ -864,11 +883,15 @@ void mergeSemiBlocks(DESblock* fullBlock, DESblock* left, DESblock* right) {
 	}
 }
 
-void invInitialPerm(DESblock* new, DESblock* old) {
+void swap(Bloque* new, Bloque* old) {
+	selectDES(new, old, SWAP, BITS_IN_SWAP);
+}
+
+void invInitialPerm(Bloque* new, Bloque* old) {
 	selectDES(new, old, IP_INV, BITS_IN_IP);
 }
 
-void selectDES(DESblock* new, DESblock* old, const unsigned short* indices, int length) {
+void selectDES(Bloque* new, Bloque* old, const unsigned short* indices, int length) {
 
 	int i;
 
@@ -876,11 +899,11 @@ void selectDES(DESblock* new, DESblock* old, const unsigned short* indices, int 
 		new->block[i] = old->block[indices[i-1]];
 }
 
-void expansion(DESblock* new, DESblock* old) {
+void expansion(Bloque* new, Bloque* old) {
 	selectDES(new, old, E, BITS_IN_E);
 }
 
-void SBox(DESblock* new, DESblock* old) {
+void SBox(Bloque* new, Bloque* old) {
 
 	int i, row, col;
 	int value;
@@ -897,29 +920,10 @@ void SBox(DESblock* new, DESblock* old) {
 	}
 }
 
-void permutation(DESblock* new, DESblock* old) {
+void permutation(Bloque* new, Bloque* old) {
 	selectDES(new, old, P, BITS_IN_P);
 }
 
-void hexToChar(uint8_t* c, char* hex) {
-
-	/* Least significant four bits */
-	if ((hex[1] >= '0') && (hex[1] <= '9'))
-		(*c) = hex[1] - '0';
-	else if ((hex[1] >= 'A') && (hex[1] <= 'F'))
-		(*c) = hex[1] + 10 - 'A';
-	else if ((hex[1] >= 'a') && (hex[1] <= 'f'))
-		(*c) = hex[1] + 10 - 'a';
-
-	/* Most significant four bits */
-	if ((hex[0] >= '0') && (hex[0] <= '9'))
-		(*c) += 16*(hex[0] - '0');
-	else if ((hex[0] >= 'A') && (hex[0] <= 'F'))
-		(*c) += 16*(hex[0] + 10 - 'A');
-	else if ((hex[0] >= 'a') && (hex[0] <= 'f'))
-		(*c) += 16*(hex[0] + 10 - 'a');
-
-}
 
 
 
