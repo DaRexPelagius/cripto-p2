@@ -30,12 +30,12 @@ static const unsigned short PC2[BITS_IN_PC2] = {
 };
 
 /* Shifts in each of the clave halves in each round (for encryption) */
-static const unsigned short ROUND_SHIFTS[NUM_ROUNDS] = {
+static const unsigned short ROUND_SHIFTS[RONDAS] = {
 	1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
 };
 
 /* Shifts in each of the clave halves in each round (for decryption) */
-static const unsigned short ROUND_SHIFTS_DEC[NUM_ROUNDS] = {
+static const unsigned short ROUND_SHIFTS_DEC[RONDAS] = {
 	0, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
 };
 
@@ -376,13 +376,13 @@ int getModo(int nArgs, char** args, int* modo) {
 	return flag;
 }
 /////////////////////FALTA CABECERA
-int getFormato(int nArgs, char** args, char* formato, char* modo, int flagLength) {
+int getFormato(int nArgs, char** args, char* formato, char* modo, int lonParam) {
 
 	int i;
 	int aux = 0;
 
-	for (i=1; i<=nArgs-2; i++){
-		if ((strncmp(args[i], modo, flagLength) == 0) && (strlen(args[i]) == flagLength)) {
+	for (i = 1; i <= nArgs - 2; i++){
+		if ((strncmp(args[i], modo, lonParam) == 0) && (strlen(args[i]) == lonParam)) {
 			if (aux) return -1;
 			else {
 				if ((strlen(args[i + 1]) == 1) && (args[i + 1][0] == FORMATO_HEX)) {
@@ -419,8 +419,7 @@ void imprimirSalida(FILE* fsalida, char formato, char* texto, int lon) {
 }
 
 void padding(char* texto, int* lon, int numero, char padChar) {
-
-	while ((*lon) * 8 % numero != 0)	texto[(*lon)++] = padChar;
+	while ((*lon) * 8 % numero != 0) texto[(*lon)++] = padChar;
 }
 
 
@@ -428,7 +427,7 @@ int prepararCBC(char* clave, char* bufferVecIni, int lenVecIni, int tamBloque, C
 
 	//Inicializamos la clave y comprobamos que es valida
 	if (clave) {
-		if (hexaToBlock(&(cbc->clave),clave,TAM_CLAVE) == -1){
+		if (hex2Bloque(&(cbc->clave), clave, TAM_CLAVE) == -1){
 			fprintf(stderr,"ERROR: Error en el formato de la clave.\n");
 			return -1;
 		}else if (!esValida(&(cbc->clave))){
@@ -441,7 +440,7 @@ int prepararCBC(char* clave, char* bufferVecIni, int lenVecIni, int tamBloque, C
 	}
 
 	//Preparamos el vector de inicializacion
-	if (hexaToBlock(&(cbc->IV),bufferVecIni,lenVecIni) == -1){
+	if (hex2Bloque(&(cbc->IV), bufferVecIni, lenVecIni) == -1){
 		fprintf(stderr,"ERROR: Error en el formato del vector de inicializacion.\n");		
 		return -1;
 	}
@@ -454,7 +453,7 @@ int prepararCBC(char* clave, char* bufferVecIni, int lenVecIni, int tamBloque, C
 }
 
 void imprimirClave(FILE* fsalida, Bloque* clave) {
-	printHexaBlock(fsalida, clave, TAM_CLAVE, "Clave = ");
+	imprimirBloqueHexadecimal(fsalida, clave, TAM_CLAVE, "Clave = ");
 }
 
 int leerEntrada(FILE* fentrada, char formato, char* texto, int maxLon) {
@@ -463,33 +462,32 @@ int leerEntrada(FILE* fentrada, char formato, char* texto, int maxLon) {
 	uint8_t auxC;
 	char hex[2];
 	int n = 0;
-
-	if (formato == FORMATO_ASCII)
+	
+	//Si el formato de entrada es ASCII leemos tal cual
+	if (formato == FORMATO_ASCII){
 		while (((c = fgetc(fentrada)) != EOF) && (fentrada != stdin || c != '\n') && (n < maxLon)) {
 			texto[n] = c;
 			n++;
 		}
-
-	else if (formato == FORMATO_HEX)
-
+	} else if (formato == FORMATO_HEX){
 		while (1) {
-
-			/* Reads first half of the byte */
+			//Como un char es un byte, al estar en hexadecimal necesitamos
+			//dos char, leemos el primero
 			hex[0] = fgetc(fentrada);
-			while (!isHex(hex[0])) {
-				/* End of input */
-				if ((hex[0] == EOF) || ((fentrada == stdin) && (hex[0] == '\n')))
-					return n;
+			while (!comprobarHex(hex[0])) {//Comprobamos que la entrada es hexadecimal
+				//Comprobamos si ha acabado la entrada, EOF si leemos de un fichero, \n de consola
+				if ((hex[0] == EOF) || ((fentrada == stdin) && (hex[0] == '\n'))) return n;
 				hex[0] = fgetc(fentrada);
 			}
 
-			/* Reads second half of the byte */
+			//Cuando encontremos el primer digito hex, leemos su segundo byte
 			hex[1] = fgetc(fentrada);
-			while (!isHex(hex[1])) {
-				/* End of input with an incomplete byte => Padding */
+			while (!comprobarHex(hex[1])) {
+				//Comprobamos si ha acabado la entrada, EOF si leemos de un fichero, \n de consola
+				//Si acaba el fichero tenemos que completar(padding) el digito hexadecimal
 				if ((hex[1] == EOF) || ((fentrada == stdin) && (hex[1] == '\n'))) {
 					hex[1] = '0';
-					hexToChar(&auxC,hex);
+					hex2Char(&auxC, hex);
 					texto[n] = auxC;
 					n++;
 					return n;
@@ -497,42 +495,39 @@ int leerEntrada(FILE* fentrada, char formato, char* texto, int maxLon) {
 				hex[1] = fgetc(fentrada);
 			}
 
-			/* Translates the complete byte */
-			hexToChar(&auxC,hex);
+			//Traducimos el digito hexadecimal
+			hex2Char(&auxC,hex);
 			texto[n] = auxC;
 			n++;
 		}
-
+	}
 	return n;
 }
 
-void CFBmode(int flag, char* textoplano, char* textocifrado, int lon, CBC* cbc) {
+void CFBmode(int modo, char* textoplano, char* textocifrado, int lon, CBC* cbc) {
 	
-	Bloque plainBlock, cipherBlock;
+	Bloque bloqueTextoPlano, bloqueTextoCifrado;
 	int i;
 	int l = cbc->lenVecIni;
 	int s = cbc->tamBloque;
-	int nBlocks = lon * 8 / s;
+	int nBloques = lon * 8 / s;
 
-	/* Initial shift register content */
-	for (i=1; i<=TAM_BLOQUE-l; i++)
-		cbc->SR.block[i] = 0;
-	for (i=1; i<=l; i++)
-		cbc->SR.block[TAM_BLOQUE-l+i] = cbc->IV.block[i];
+	//Preparamos los valores iniciales 
+	for (i = 1; i <= (TAM_BLOQUE - l); i++)	cbc->SR.bloque[i] = 0;
+	for (i = 1; i <= l; i++) cbc->SR.bloque[TAM_BLOQUE - l + i] = cbc->IV.bloque[i];
 
-	/* Encryption/decryption by blocks */
-	if (flag == 1) {
-		for (i=0; i<nBlocks; i++) {
-			textToBlock(&plainBlock, textoplano + i*s/8, s);
-			CFBstep(flag,&plainBlock,&cipherBlock,cbc);
-			blockToText(textocifrado + i*s/8, &cipherBlock, s);
+	//Segun el modo procedemos a cifrar o descifrar
+	if (modo == 1) {
+		for (i = 0; i < nBloques; i++) {
+			texto2Bloque(&bloqueTextoPlano, textoplano + i * s / 8, s);
+			CFBstep(modo, &bloqueTextoPlano, &bloqueTextoCifrado, cbc);
+			bloque2Texto(textocifrado + i * s / 8, &bloqueTextoCifrado, s);
 		}
-	}
-	else {
-		for (i=0; i < nBlocks; i++) {
-			textToBlock(&cipherBlock, textocifrado + i*s/8, s);
-			CFBstep(flag,&plainBlock,&cipherBlock,cbc);
-			blockToText(textoplano + i*s/8, &plainBlock, s);
+	} else {
+		for (i=0; i < nBloques; i++) {
+			texto2Bloque(&bloqueTextoCifrado, textocifrado + i*s/8, s);
+			CFBstep(modo, &bloqueTextoPlano,&bloqueTextoCifrado,cbc);
+			bloque2Texto(textoplano + i*s/8, &bloqueTextoPlano, s);
 		}
 	}
 }
@@ -541,25 +536,22 @@ void char2Hex(char* hex, uint8_t c) {
 
 	uint8_t bin[8];
 
-	charToBin(bin,c);
-	binToHex(hex,bin);
-	binToHex(hex+1,bin+4);
+	char2Bin(bin,c);
+	bin2Hex(hex,bin);
+	bin2Hex(hex+1,bin+4);
 }
 
-int hexaToBlock(Bloque* newBlock, char* string, int length) {
+int hex2Bloque(Bloque* resultado, char* string, int length) {
 
 	int i;
 	
-	if (strlen(string) != (length/4 + 2))
-		return -1;
+	if (strlen(string) != (length/4 + 2)) return -1;
 
-	if ((string[0] != '0') || (string[1] != 'x'))
-		return -1;
+	if ((string[0] != '0') || (string[1] != 'x')) return -1;
 
-	for (i=0; i<length/4; i++) {
-		if (!isHex(string[i+2]))
-			return -1;
-		hexToBin(&(newBlock->block[4*i+1]),string[i+2]);
+	for (i = 0; i < length / 4; i++) {
+		if (!comprobarHex(string[i + 2])) return -1;
+		hex2Bin(&(resultado->bloque[4 * i + 1]),string[i + 2]);
 	}
 
 	return 0;
@@ -572,7 +564,7 @@ int esValida(Bloque* clave) {
 
 	for (byte = 0; byte < TAM_CLAVE / 8; byte++) {
 		acc = 0;
-		for (bit = 0; bit < 8; bit++) acc += clave->block[8 * byte + bit + 1];
+		for (bit = 0; bit < 8; bit++) acc += clave->bloque[8 * byte + bit + 1];
 		if (acc % 2 == 0) return 0;
 	}
 
@@ -584,10 +576,10 @@ void newClave(Bloque* clave) {
 	int byte, bit;
 	int acc;
 
-	for (byte=0; byte<TAM_CLAVE/8; byte++) {
+	for (byte = 0; byte < (TAM_CLAVE / 8); byte++) {
 		acc = 0;
-		for (bit=0; bit<7; bit++) acc += (clave->block[8*byte+bit+1] = naleatorio(0,1));
-		clave->block[8*byte+7+1] = (acc%2 == 0);
+		for (bit = 0; bit < 7; bit++) acc += (clave->bloque[8 * byte + bit + 1] = naleatorio(0,1));
+		clave->bloque[8 * byte + 7 + 1] = (acc % 2 == 0);
 	}
 }
 
@@ -598,192 +590,178 @@ int naleatorio(int a, int b) {
 	return a + (rand() % (b - a + 1));
 }
 
-void printHexaBlock(FILE* fsalida, Bloque* b, int tamBloque, char* texto) {
+void imprimirBloqueHexadecimal(FILE* fsalida, Bloque* b, int tamBloque, char* texto) {
 
 	char c;
 	int i, j;
 	uint8_t binBuffer[4];
 
-	if (texto)
-		fprintf(fsalida,"%s",texto);
+	//Si existe texto de salida lo imprimimos
+	if (texto) fprintf(fsalida, "%s", texto);
+	//Sino imprimimos 0
 	fprintf(fsalida,"%s","0x");
-
-	for (i=0; i<tamBloque/4; i++) {
-		for (j=0; j<4; j++)
-			binBuffer[j] = b->block[i*4+j+1];
-		binToHex(&c,binBuffer);
-		fputc(c,fsalida);
+	
+	//Imprimimos el bloque hexadecimal
+	for (i = 0; i < tamBloque / 4; i++) {
+		for (j = 0; j < 4; j++) binBuffer[j] = b->bloque[i * 4 + j + 1];
+		bin2Hex(&c, binBuffer);
+		fputc(c, fsalida);
 	}
-	fputc('\n',fsalida);
+	fputc('\n', fsalida);//Terminamos con un /n para que no nos quede feo
 }
-// isHex @ number.c
-int isHex(char hex) {
-
-	if (((hex >= '0') && (hex <= '9')) || ((hex >= 'A') && (hex <= 'F')) || ((hex >= 'a') && (hex <= 'f')))
-		return 1;
+// comprobarHex @ number.c
+int comprobarHex(char hex) {
+	//Miramos que solo tiene numeros del 0-9 o letras A-F como tiene que ser en hexadecimal
+	if (((hex >= '0') && (hex <= '9')) || ((hex >= 'A') && (hex <= 'F')) || ((hex >= 'a') && (hex <= 'f')))	return 1;
 
 	return 0;
 }
 
 
-void hexToChar(uint8_t* c, char* hex) {
+void hex2Char(uint8_t* c, char* hex) {
 
-	/* Least significant four bits */
-	if ((hex[1] >= '0') && (hex[1] <= '9'))
-		(*c) = hex[1] - '0';
-	else if ((hex[1] >= 'A') && (hex[1] <= 'F'))
-		(*c) = hex[1] + 10 - 'A';
-	else if ((hex[1] >= 'a') && (hex[1] <= 'f'))
-		(*c) = hex[1] + 10 - 'a';
+	//Hex tiene dos posiciones hex[0] y hex[1]
+	//Siendo hex[0] los bits mas significativos
+	if ((hex[1] >= '0') && (hex[1] <= '9'))	(*c) = hex[1] - '0';
+	else if ((hex[1] >= 'A') && (hex[1] <= 'F')) (*c) = hex[1] + 10 - 'A'; //Ej: B-A = 1, 1+10=11=0Bx
+	else if ((hex[1] >= 'a') && (hex[1] <= 'f')) (*c) = hex[1] + 10 - 'a';
 
-	/* Most significant four bits */
-	if ((hex[0] >= '0') && (hex[0] <= '9'))
-		(*c) += 16*(hex[0] - '0');
-	else if ((hex[0] >= 'A') && (hex[0] <= 'F'))
-		(*c) += 16*(hex[0] + 10 - 'A');
-	else if ((hex[0] >= 'a') && (hex[0] <= 'f'))
-		(*c) += 16*(hex[0] + 10 - 'a');
+	//Repetimos operacion con los bits mas significativos
+	if ((hex[0] >= '0') && (hex[0] <= '9'))	(*c) += 16*(hex[0] - '0');
+	else if ((hex[0] >= 'A') && (hex[0] <= 'F')) (*c) += 16*(hex[0] + 10 - 'A');
+	else if ((hex[0] >= 'a') && (hex[0] <= 'f')) (*c) += 16*(hex[0] + 10 - 'a');
 
 }
-void textToBlock(Bloque* b, char* texto, int tamBloque) {
+void texto2Bloque(Bloque* b, char* texto, int tamBloque) {
 
 	int i;
-	int nBytes = tamBloque/8;
+	int nBytes = tamBloque / 8;
 
-	for (i=0; i<nBytes ; i++)
-		charToBin(b->block + i*8 + 1, texto[i]);
+	for (i = 0; i < nBytes ; i++) char2Bin(b->bloque + i * 8 + 1, texto[i]);
 }
 
-void CFBstep(int flag, Bloque* plainBlock, Bloque* cipherBlock, CBC* cbc) {
+void CFBstep(int flag, Bloque* bloqueTextoPlano, Bloque* bloqueTextoCifrado, CBC* cbc) {
 
 	int s = cbc->tamBloque;
-	Bloque outputDES;
+	Bloque salidaDES;
 
-	/* DES algorithm (input from shift register) */
-	DES(&outputDES,&(cbc->SR),&(cbc->clave),1);
+	//Aplicamos DES
+	DES(&salidaDES, &(cbc->SR), &(cbc->clave), 1);
 
-	/* XOR with the s most significant bits */
-	if (flag == 1)
-		xorDES(cipherBlock,plainBlock,&outputDES,s);
-	else
-		xorDES(plainBlock,cipherBlock,&outputDES,s);
+	//Hacemos XOR del mediobloque izq
+	if (flag == 1) xorDES(bloqueTextoCifrado, bloqueTextoPlano, &salidaDES, s);
+	else xorDES(bloqueTextoPlano, bloqueTextoCifrado, &salidaDES, s);
 
-	/* Shift register ready for the next block */
-	shiftRegister(&(cbc->SR),cipherBlock,s);
+	//Preparamos SR para la siguiente ronda
+	shiftRegister(&(cbc->SR), bloqueTextoCifrado, s);
 }
 
-void blockToText(char* texto, Bloque* b, int tamBloque) {
+void bloque2Texto(char* texto, Bloque* b, int tamBloque) {
 
 	int i;
-	int nBytes = tamBloque/8;
+	int nBytes = tamBloque / 8;
 
-	for (i=0; i<nBytes; i++)
-		binToChar(((uint8_t*)texto)+i,b->block + 8*i + 1);
+	for (i=0; i < nBytes; i++) bin2Char(((uint8_t*) texto) + i, b->bloque + 8 * i + 1);
 }
 
-void shiftRegister(Bloque* output, Bloque* input, int shift) {
+//FUNCION PROPIA DEL CFB
+void shiftRegister(Bloque* resultado, Bloque* entrada, int shift) {
 
 	int i;
 
-	for (i=1; i <= TAM_BLOQUE-shift; i++)
-		output->block[i] = output->block[i+shift];
-	for (i=1; i <= shift; i++)
-		output->block[i+TAM_BLOQUE-shift] = input->block[i];
+	for (i = 1; i <= TAM_BLOQUE - shift; i++) resultado->bloque[i] = resultado->bloque[i + shift];
+	for (i = 1; i <= shift; i++) resultado->bloque[i + TAM_BLOQUE - shift] = entrada->bloque[i];
 }
 
-void charToBin(uint8_t* bin, uint8_t c) {
+void char2Bin(uint8_t* bin, uint8_t c) {
 
 	int i;
-
-	for (i=7; i>=0; i--) {
-		bin[i] = c%2;
-		c = c/2;
+	
+	//El paso a binario es sencillo
+	for (i = 7; i >= 0; i--) {
+		bin[i] = c % 2;
+		c = c / 2;
 	}
 }
 
-void binToHex(char* c, uint8_t* bin) {
+void bin2Hex(char* c, uint8_t* bin) {
 
 	int i;
-	int value = 0;
-	int pow = 1;
+	int valor = 0;
+	int potencia = 1;//2 elevado a |i-3|
 
-	for (i=3; i>=0; i--) {
-		value += pow*bin[i];
-		pow *= 2;
+	for (i = 3; i >= 0; i--) {
+		valor += potencia * bin[i];
+		potencia *= 2;
 	}
-
-	if (value < 10)
-		(*c) = '0' + value;
-	else
-		(*c) = 'A' + value - 10;
+	//Acabamos con un padding
+	if (valor < 10)	(*c) = '0' + valor;
+	else (*c) = 'A' + valor - 10;
 }
 
-void hexToBin(uint8_t* bin, char hex) {
+void hex2Bin(uint8_t* bin, char hex) {
 
-	int i, decValue = 0;
+	int i, valorDecimal = 0;
 
-	if ((hex >= '0') && (hex <= '9'))
-		decValue = hex - '0';
-	else if ((hex >= 'A') && (hex <= 'Z'))
-		decValue = hex + 10 - 'A';
-	else if ((hex >= 'a') && (hex <= 'z'))
-		decValue = hex + 10 - 'a';
+	if ((hex >= '0') && (hex <= '9')) valorDecimal = hex - '0';
+	else if ((hex >= 'A') && (hex <= 'Z')) valorDecimal = hex + 10 - 'A';
+	else if ((hex >= 'a') && (hex <= 'z')) valorDecimal = hex + 10 - 'a';
 
-	for (i=3; i>=0; i--) {
-		bin[i] = decValue%2;
-		decValue = decValue/2;
+	for (i = 3; i >= 0; i--) {
+		bin[i] = valorDecimal % 2;
+		valorDecimal = valorDecimal / 2;
 	}
 }
 
-void DES(Bloque* output, Bloque* input, Bloque* clave, int flag) {
+void DES(Bloque* resultado, Bloque* entrada, Bloque* clave, int modo) {
 
-	Bloque oldLeft, oldRight, newLeft, newRight;
-	Bloque ipBlock, rBlock, sBlock;
-	Bloque oldKey, newClave, roundKey;
+	Bloque izqEntrada, derEntrada, izqSalida, derSalida;
+	Bloque bloquePermIni, rBlock, sBlock;
+	Bloque claveEntrada, claveSalida, claveRonda;
 	int i;
 
-	/* Initial permutation */
-	initialPerm(&ipBlock,input);
+	//Permutamos la primera vez
+	initialPerm(&bloquePermIni, entrada);
 
-	/* Splits the block into the two halves */
-	leftSemiBlock(&oldLeft,&ipBlock);
-	rightSemiBlock(&oldRight,&ipBlock);
+	//Calculamos las dos mitades
+	leftSemiBlock(&izqEntrada,&bloquePermIni);
+	rightSemiBlock(&derEntrada,&bloquePermIni);
 
-	/* Permutation Choice 1 */
-	permChoice1(&oldKey,clave);
+	//Realizamos una permutacion
+	permChoice1(&claveEntrada,clave);
 
-	/* NUM_ROUNDS rounds */
-	for (i=1; i<= NUM_ROUNDS; i++) {
+	//Ahora hacemos tantas rondas como hemos definido en la constante
+	for (i = 1; i<= RONDAS; i++) {
 
-		LCS(&newClave,&oldKey,i,flag);
-		permChoice2(&roundKey,&newClave);
+		LCS(&claveSalida, &claveEntrada, i, modo);
+		permChoice2(&claveRonda, &claveSalida);
 
-		singleRound(&newLeft,&newRight,&oldLeft,&oldRight,&roundKey,i);
+		singleRound(&izqSalida, &derSalida, &izqEntrada, &derEntrada, &claveRonda, i);
 
-		copyBlock(&oldLeft,&newLeft,BITS_IN_FEISTEL/2);
-		copyBlock(&oldRight,&newRight,BITS_IN_FEISTEL/2);
-		copyBlock(&oldKey,&newClave,BITS_IN_PC1);
+		copiarBloque(&izqEntrada,&izqSalida,BITS_IN_FEISTEL/2);
+		copiarBloque(&derEntrada,&derSalida,BITS_IN_FEISTEL/2);
+		copiarBloque(&claveEntrada,&claveSalida,BITS_IN_PC1);
 	}
 
 	/* Merges the semiblocks */
-	mergeSemiBlocks(&rBlock,&oldLeft,&oldRight);
+	mergeSemiBlocks(&rBlock,&izqEntrada,&derEntrada);
 
 	/* 32-bit swap */
 	swap(&sBlock,&rBlock);
 
 	/* Inverse permutation */
-	invInitialPerm(output,&sBlock);
+	invInitialPerm(resultado,&sBlock);
 }
 
-void xorDES(Bloque* new, Bloque* old1, Bloque* old2, int length) {
+void xorDES(Bloque* resultado, Bloque* entrada1, Bloque* entrada2, int length) {
 
 	int i;
 
-	for (i=1; i <= length; i++) 
-		new->block[i] = (old1->block[i] != old2->block[i]);
+	for (i = 1; i <= length; i++) 
+		resultado->bloque[i] = (entrada1->bloque[i] != entrada2->bloque[i]);
 }
 
-void binToChar(uint8_t* c, uint8_t* bin) {
+void bin2Char(uint8_t* c, uint8_t* bin) {
 
 	int i;
 	int pow = 1;
@@ -796,16 +774,15 @@ void binToChar(uint8_t* c, uint8_t* bin) {
 	}
 }
 
-void initialPerm(Bloque* new, Bloque* old) {
-	selectDES(new, old, IP, BITS_IN_IP);
+void initialPerm(Bloque* resultado, Bloque* entrada) {
+	selectDES(resultado, entrada, IP, BITS_IN_IP);
 }
 
 void leftSemiBlock(Bloque* semiBlock, Bloque* fullBlock) {
 
 	int i;
 
-	for (i=1; i <= BITS_IN_FEISTEL/2; i++)
-		semiBlock->block[i] = fullBlock->block[i];
+	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++) semiBlock->bloque[i] = fullBlock->bloque[i];
 }
 
 
@@ -813,64 +790,63 @@ void rightSemiBlock(Bloque* semiBlock, Bloque* fullBlock) {
 
 	int i;
 
-	for (i=1; i <= BITS_IN_FEISTEL/2; i++)
-		semiBlock->block[i] = fullBlock->block[i+BITS_IN_FEISTEL/2];
+	for (i = 1; i <= BITS_IN_FEISTEL/2; i++)
+		semiBlock->bloque[i] = fullBlock->bloque[i + BITS_IN_FEISTEL / 2];
 }
 
-void permChoice1(Bloque* new, Bloque* old) {
-	selectDES(new, old, PC1, BITS_IN_PC1);
+void permChoice1(Bloque* resultado, Bloque* entrada) {
+	selectDES(resultado, entrada, PC1, BITS_IN_PC1);
 }
 
-void LCS(Bloque* new, Bloque* old, int nRound, int flag) {
+void LCS(Bloque* resultado, Bloque* entrada, int nRound, int flag) {
 
-	if (flag == 1) shiftLeftDES(new, old, ROUND_SHIFTS[nRound-1]);
-	else if (flag == 2) shiftRightDES(new, old, ROUND_SHIFTS_DEC[nRound-1]);
+	if (flag == 1) shiftLeftDES(resultado, entrada, ROUND_SHIFTS[nRound-1]);
+	else if (flag == 2) shiftRightDES(resultado, entrada, ROUND_SHIFTS_DEC[nRound-1]);
 }
 
 //ShiftLeftDES @ Des.c
-void shiftLeftDES(Bloque* new, Bloque* old, int shift) {
+void shiftLeftDES(Bloque* resultado, Bloque* entrada, int shift) {
 
 	int i;
 
-	for (i=0; i < BITS_MEDIOBLOQUE; i++) new->block[i+1] = old->block[((i+shift)%(BITS_MEDIOBLOQUE)) + 1];
-	for (i=0; i < BITS_MEDIOBLOQUE; i++) new->block[i+BITS_MEDIOBLOQUE+1] = old->block[((i+shift)%(BITS_MEDIOBLOQUE)) + BITS_MEDIOBLOQUE + 1];
+	for (i=0; i < BITS_MEDIOBLOQUE; i++) resultado->bloque[i+1] = entrada->bloque[((i+shift)%(BITS_MEDIOBLOQUE)) + 1];
+	for (i=0; i < BITS_MEDIOBLOQUE; i++) resultado->bloque[i+BITS_MEDIOBLOQUE+1] = entrada->bloque[((i+shift)%(BITS_MEDIOBLOQUE)) + BITS_MEDIOBLOQUE + 1];
 }
 //ShiftRightDES @ Des.c
-void shiftRightDES(Bloque* new, Bloque* old, int shift) {
+void shiftRightDES(Bloque* resultado, Bloque* entrada, int shift) {
 
 	int i;
 
-	for (i=0; i < BITS_MEDIOBLOQUE; i++) new->block[i+1] = old->block[((i-shift+BITS_MEDIOBLOQUE)%(BITS_MEDIOBLOQUE)) + 1];
-	for (i=0; i < BITS_MEDIOBLOQUE; i++) new->block[i+BITS_MEDIOBLOQUE+1] = old->block[((i-shift+BITS_MEDIOBLOQUE)%(BITS_MEDIOBLOQUE)) + BITS_MEDIOBLOQUE + 1];
+	for (i=0; i < BITS_MEDIOBLOQUE; i++) resultado->bloque[i+1] = entrada->bloque[((i-shift+BITS_MEDIOBLOQUE)%(BITS_MEDIOBLOQUE)) + 1];
+	for (i=0; i < BITS_MEDIOBLOQUE; i++) resultado->bloque[i+BITS_MEDIOBLOQUE+1] = entrada->bloque[((i-shift+BITS_MEDIOBLOQUE)%(BITS_MEDIOBLOQUE)) + BITS_MEDIOBLOQUE + 1];
 }
 
-void permChoice2(Bloque* new, Bloque* old) {
-	selectDES(new, old, PC2, BITS_IN_PC2);
+void permChoice2(Bloque* resultado, Bloque* entrada) {
+	selectDES(resultado, entrada, PC2, BITS_IN_PC2);
 }
 
-void singleRound(Bloque* newLeft, Bloque* newRight, Bloque* oldLeft, Bloque* oldRight, Bloque* clave, int nRound) {
+void singleRound(Bloque* izqSalida, Bloque* derSalida, Bloque* izqEntrada, Bloque* derEntrada, Bloque* clave, int nRound) {
 
 	Bloque eBlock, xBlock, sBlock, pBlock;
 
 	/* F function */
-	expansion(&eBlock,oldRight);
+	expansion(&eBlock,derEntrada);
 	xorDES(&xBlock,&eBlock,clave,BITS_IN_E);
 	SBox(&sBlock,&xBlock);
 	permutation(&pBlock,&sBlock);
 
 	/* L(i) = R(i-1) */
-	copyBlock(newLeft,oldRight,BITS_IN_FEISTEL/2);
+	copiarBloque(izqSalida,derEntrada,BITS_IN_FEISTEL/2);
 
 	/* R(i) = L(i-1) xor F(R(i-1),k(i)) */
-	xorDES(newRight,oldLeft,&pBlock,BITS_IN_P);
+	xorDES(derSalida,izqEntrada,&pBlock,BITS_IN_P);
 }
 
-void copyBlock(Bloque* new, Bloque* old, int length) {
+void copiarBloque(Bloque* resultado, Bloque* entrada, int length) {
 
 	int i;
 
-	for (i=1; i <= length; i++)
-		new->block[i] = old->block[i];
+	for (i=1; i <= length; i++) resultado->bloque[i] = entrada->bloque[i];
 }
 
 void mergeSemiBlocks(Bloque* fullBlock, Bloque* left, Bloque* right) {
@@ -878,50 +854,51 @@ void mergeSemiBlocks(Bloque* fullBlock, Bloque* left, Bloque* right) {
 	int i;
 
 	for (i=1; i <= BITS_IN_FEISTEL/2; i++) {
-		fullBlock->block[i] = left->block[i];
-		fullBlock->block[BITS_IN_FEISTEL/2+i] = right->block[i];
+		fullBlock->bloque[i] = left->bloque[i];
+		fullBlock->bloque[BITS_IN_FEISTEL/2+i] = right->bloque[i];
 	}
 }
 
-void swap(Bloque* new, Bloque* old) {
-	selectDES(new, old, SWAP, BITS_IN_SWAP);
+void swap(Bloque* resultado, Bloque* entrada) {
+	selectDES(resultado, entrada, SWAP, BITS_IN_SWAP);
 }
 
-void invInitialPerm(Bloque* new, Bloque* old) {
-	selectDES(new, old, IP_INV, BITS_IN_IP);
+void invInitialPerm(Bloque* resultado, Bloque* entrada) {
+	selectDES(resultado, entrada, IP_INV, BITS_IN_IP);
 }
 
-void selectDES(Bloque* new, Bloque* old, const unsigned short* indices, int length) {
+void selectDES(Bloque* resultado, Bloque* entrada, const unsigned short* indices, int length) {
 
 	int i;
 
 	for (i=1; i <= length; i++)
-		new->block[i] = old->block[indices[i-1]];
+		resultado->bloque[i] = entrada->bloque[indices[i-1]];
 }
 
-void expansion(Bloque* new, Bloque* old) {
-	selectDES(new, old, E, BITS_IN_E);
+void expansion(Bloque* resultado, Bloque* entrada) {
+	selectDES(resultado, entrada, E, BITS_IN_E);
 }
 
-void SBox(Bloque* new, Bloque* old) {
+void SBox(Bloque* resultado, Bloque* entrada) {
 
-	int i, row, col;
+	int i, fila, col;
 	int value;
 
-	for (i=0; i < NUM_S_BOXES; i++) {
-		row = 2*old->block[1+6*i] + old->block[1+6*i+5];
-		col = 8*old->block[1+6*i+1] + 4*old->block[1+6*i+2] + 2*old->block[1+6*i+3] + old->block[1+6*i+4];
+	for (i = 0; i < NUM_S_BOXES; i++) {
+		fila = 2 * entrada->bloque[1 + 6 * i] + entrada->bloque[1 + 6 * i + 5];
+		col = 8 * entrada->bloque[1 + 6 * i + 1] + 4 * entrada->bloque[1 + 6 * i + 2];
+		col +=  2 * entrada->bloque[1 + 6 * i + 3] + entrada->bloque[1 + 6 * i + 4];
 		
-		value = S_BOXES[i][row][col];
-		new->block[1+i*4+3] = value%2;
-		new->block[1+i*4+2] = (value/2)%2;
-		new->block[1+i*4+1] = (value/4)%2;
-		new->block[1+i*4] = (value/8)%2;
+		value = S_BOXES[i][fila][col];
+		resultado->bloque[1 + i * 4 + 3] = value % 2;
+		resultado->bloque[1 + i * 4 + 2] = (value / 2) % 2;
+		resultado->bloque[1 + i * 4 + 1] = (value / 4) % 2;
+		resultado->bloque[1 + i * 4] = (value / 8) % 2;
 	}
 }
 
-void permutation(Bloque* new, Bloque* old) {
-	selectDES(new, old, P, BITS_IN_P);
+void permutation(Bloque* resultado, Bloque* entrada) {
+	selectDES(resultado, entrada, P, BITS_IN_P);
 }
 
 
