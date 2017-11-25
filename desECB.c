@@ -161,13 +161,13 @@ int main(int argc, char** argv) {
 	//Comprobamos que los argumentos son los correctos
 	if ((argc != 12) && (argc != 14) && (argc != 16) && (argc != 18)){
 		printf("Número de argumentos incorrecto.\n");
-		printf("Uso del programa: ./1 {-P | -I} [-i filein] [-o fileout].\n");	
+		printf("Uso del programa: ./desECB {-P | -I} [-i filein] [-o fileout].\n");	
 		return -1;
 	}
 	//Como en la practica anterior usamos una funcion auxiliar para conseguir los argumentos
 	if (getArgs(argc, argv, &flag, clave, &tamBloque, bufferVecIni, &lenVecIni, &formatoEntrada, &formatoSalida, ficheroentrada, &entrada, ficherosalida, &salida) == -1) {
 		printf("Argumentos incorrectos.\n");
-		printf("Uso del programa: ./1 {-P | -I} [-i filein] [-o fileout].\n");
+		printf("Uso del programa: ./desECB {-P | -I} [-i filein] [-o fileout].\n");
 		return -1;
 	}
 	
@@ -257,7 +257,26 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
-
+/*--------------------------------------------------------------------------
+Obtiene los argumentos
+- Entrada:
+	* Número de argumentos
+	* Array de argumentos
+	* Flag indicando si se cifra o descifra
+	* Clave
+	* Tamaño del bloque
+	* IV
+	* Longitud del IV
+	* Formato de entrada
+	* Formato de salida
+	* Nombre del fichero de entrada
+	* Puntero indicando si hay fichero de entrada
+	* Nombre del fichero de salida
+	* Puntero indicando si hay fichero de salida
+- Salida:
+	* -1 si ocurre algun error
+	* 0 si va bien
+--------------------------------------------------------------------------*/
 int getArgs(int nArgs, char** args, int* flag, char* clave, int* tamBloque, char* bufferVecIni, int* lenVecIni, char* formatoEntrada, char* formatoSalida, char* ficheroentrada, int* entrada, char* ficherosalida, int* salida) {
 
 	if (getModo(nArgs, args, flag) != 1) return -1;
@@ -375,7 +394,18 @@ int getModo(int nArgs, char** args, int* modo) {
 	}
 	return flag;
 }
-/////////////////////FALTA CABECERA
+/*--------------------------------------------------------------------------
+Obtiene el formato
+- Entrada:
+	* Número de argumentos
+	* Array de argumentos
+	* Formato
+	* Modo
+	* Longitud del parametro
+- Salida:
+	* -1 si ocurre algun error
+	* 0 si va bien
+--------------------------------------------------------------------------*/
 int getFormato(int nArgs, char** args, char* formato, char* modo, int lonParam) {
 
 	int i;
@@ -400,7 +430,14 @@ int getFormato(int nArgs, char** args, char* formato, char* modo, int lonParam) 
 	}
 	return aux;
 }
-
+/*--------------------------------------------------------------------------
+Imprime la salida
+- Entrada:
+	* Fichero donde imprimir
+	* Texto a imprimir
+	* Formato
+	* Longitud
+--------------------------------------------------------------------------*/
 void imprimirSalida(FILE* fsalida, char formato, char* texto, int lon) {
 
 	int i;
@@ -417,12 +454,28 @@ void imprimirSalida(FILE* fsalida, char formato, char* texto, int lon) {
 
 	fputc('\n', fsalida);
 }
-
+/*--------------------------------------------------------------------------
+Realiza el padding
+- Entrada:
+	* Texto
+	* Longitud
+	* Numero que queremos que la longitud sea múltiplo de
+	* Caracter con el que realizar el padding
+--------------------------------------------------------------------------*/
 void padding(char* texto, int* lon, int numero, char padChar) {
 	while ((*lon) * 8 % numero != 0) texto[(*lon)++] = padChar;
 }
 
-
+/*--------------------------------------------------------------------------
+Prepara el ECB, inicializando y comprobando la validez de la clave
+- Entrada:
+	* Clave
+	* Tamaño del bloque
+	* Puntero a la estructura de ECB
+- Salida:
+	* -1 si ocurre algun error
+	* 0 si va bien
+--------------------------------------------------------------------------*/
 int prepararECB(char* clave, int tamBloque, ECB* ecb) {
 
 	//Inicializamos la clave y comprobamos que es valida
@@ -444,11 +497,26 @@ int prepararECB(char* clave, int tamBloque, ECB* ecb) {
 
 	return 0;
 }
-
+/*--------------------------------------------------------------------------
+Imprime la clave
+- Entrada:
+	* Fichero de salida
+	* Clave a imprimir
+--------------------------------------------------------------------------*/
 void imprimirClave(FILE* fsalida, Bloque* clave) {
 	imprimirBloqueHexadecimal(fsalida, clave, TAM_CLAVE, "Clave = ");
 }
 
+/*--------------------------------------------------------------------------
+Leer la entrada
+- Entrada:
+	* Fichero de entrada
+	* Formato
+	* Texto a leer
+	* Maxima longitud
+- Salida:
+	* Longitud n
+--------------------------------------------------------------------------*/
 int leerEntrada(FILE* fentrada, char formato, char* texto, int maxLon) {
 
 	char c;
@@ -497,6 +565,15 @@ int leerEntrada(FILE* fentrada, char formato, char* texto, int maxLon) {
 	return n;
 }
 
+/*--------------------------------------------------------------------------
+Realiza el cifrado o descifrado siguiendo el metodo ECB
+- Entrada:
+	* Modo (cifrado/descifrado)
+	* Texto plano
+	* Texto cifrado
+	* Longitud
+	* Puntero a la estructura ECB
+--------------------------------------------------------------------------*/
 void modoECB(int modo, char* textoplano, char* textocifrado, int lon, ECB* ecb) {
 	
 	Bloque bloqueTextoPlano, bloqueTextoCifrado;
@@ -521,7 +598,12 @@ void modoECB(int modo, char* textoplano, char* textocifrado, int lon, ECB* ecb) 
 		}
 	}
 }
-
+/*--------------------------------------------------------------------------
+Cambia un caracter a un hexadecimal
+- Entrada:
+	* Hexadicimal
+	* Caracter
+--------------------------------------------------------------------------*/
 void char2Hex(char* hex, uint8_t c) {
 
 	uint8_t bin[8];
@@ -530,7 +612,16 @@ void char2Hex(char* hex, uint8_t c) {
 	bin2Hex(hex,bin);
 	bin2Hex(hex+1,bin+4);
 }
-
+/*--------------------------------------------------------------------------
+Cambia un hexadecimal a un bloque
+- Entrada:
+	* Puntero al Bloque
+	* Cadena
+	* Longitud
+- Salida:
+	* -1 si ocurre algun error
+	* 0 si va bien
+--------------------------------------------------------------------------*/
 int hex2Bloque(Bloque* resultado, char* string, int length) {
 
 	int i;
@@ -546,7 +637,14 @@ int hex2Bloque(Bloque* resultado, char* string, int length) {
 
 	return 0;
 }
-
+/*--------------------------------------------------------------------------
+Comprueba si una clave es valida
+- Entrada:
+	* Clave
+- Salida:
+	* 1 si la clave es valida
+	* 0 si no
+--------------------------------------------------------------------------*/
 int esValida(Bloque* clave) {
 
 	int byte, bit;
@@ -560,7 +658,11 @@ int esValida(Bloque* clave) {
 
 	return 1;
 }
-
+/*--------------------------------------------------------------------------
+Genera una nueva clave
+- Entrada:
+	* Clave a generar
+--------------------------------------------------------------------------*/
 void newClave(Bloque* clave) {
 
 	int byte, bit;
@@ -572,14 +674,27 @@ void newClave(Bloque* clave) {
 		clave->bloque[8 * byte + 7 + 1] = (acc % 2 == 0);
 	}
 }
-
+/*--------------------------------------------------------------------------
+Genera un numero aleatorio en el intervalo (a,b)
+- Entrada:
+	* Intervalo (a,b)
+- Salida:
+	* Numero generado
+--------------------------------------------------------------------------*/
 int naleatorio(int a, int b) {
 
 	if (a >= b) return a;
 
 	return a + (rand() % (b - a + 1));
 }
-
+/*--------------------------------------------------------------------------
+Imprime un bloque
+- Entrada:
+	* Fichero de salida
+	* Bloque
+	* Tamaño del bloque
+	* Texto
+--------------------------------------------------------------------------*/
 void imprimirBloqueHexadecimal(FILE* fsalida, Bloque* b, int tamBloque, char* texto) {
 
 	char c;
@@ -599,15 +714,26 @@ void imprimirBloqueHexadecimal(FILE* fsalida, Bloque* b, int tamBloque, char* te
 	}
 	fputc('\n', fsalida);//Terminamos con un /n para que no nos quede feo
 }
-// comprobarHex @ number.c
+/*--------------------------------------------------------------------------
+Comprueba si un caracter es hexadecimal
+- Entrada:
+	* Caracter
+- Salida:
+	* 1 si es hexadecimal
+	* 0 si no
+--------------------------------------------------------------------------*/
 int comprobarHex(char hex) {
 	//Miramos que solo tiene numeros del 0-9 o letras A-F como tiene que ser en hexadecimal
 	if (((hex >= '0') && (hex <= '9')) || ((hex >= 'A') && (hex <= 'F')) || ((hex >= 'a') && (hex <= 'f')))	return 1;
 
 	return 0;
 }
-
-
+/*--------------------------------------------------------------------------
+Paso de hexadecimal a caracter
+- Entrada:
+	* Caracter c
+	* Hexadecimal
+--------------------------------------------------------------------------*/
 void hex2Char(uint8_t* c, char* hex) {
 
 	//Hex tiene dos posiciones hex[0] y hex[1]
@@ -622,6 +748,13 @@ void hex2Char(uint8_t* c, char* hex) {
 	else if ((hex[0] >= 'a') && (hex[0] <= 'f')) (*c) += 16*(hex[0] + 10 - 'a');
 
 }
+/*--------------------------------------------------------------------------
+Paso de texto a bloque
+- Entrada:
+	* Bloque b
+	* Texto
+	* Tamaño del bloque
+--------------------------------------------------------------------------*/
 void texto2Bloque(Bloque* b, char* texto, int tamBloque) {
 
 	int i;
@@ -629,17 +762,28 @@ void texto2Bloque(Bloque* b, char* texto, int tamBloque) {
 
 	for (i = 0; i < nBytes ; i++) char2Bin(b->bloque + i * 8 + 1, texto[i]);
 }
-
-//Funcion que aplica ECB, como ECB es la aplicacion directa de DES, simplemente llamamos a DES
+/*--------------------------------------------------------------------------
+Funcion que aplica ECB, como ECB es la aplicacion directa de DES, simplemente llamamos a DES
+- Entrada:
+	* Texto plano
+	* Texto cifrado
+	* Puntero a la estructura ECB
+	* Flag
+--------------------------------------------------------------------------*/
 void fECB(int flag, Bloque* bloqueTextoPlano, Bloque* bloqueTextoCifrado, ECB* ecb) {
 
 	//Aplicamos DES
 	DES(bloqueTextoCifrado, bloqueTextoPlano, &(ecb->clave), 1);
 
 }
-
-
-//Operacion de DES
+/*--------------------------------------------------------------------------
+Realiza la operación del DES de acuerdo al esquema visto en la teoria
+- Entrada:
+	* Entrada
+	* Resultado
+	* Modo
+	* Clave
+--------------------------------------------------------------------------*/
 void DES(Bloque* resultado, Bloque* entrada, Bloque* clave, int modo) {
 
 	Bloque izqEntrada, derEntrada, izqSalida, derSalida;
@@ -823,7 +967,7 @@ void permutacionClave2(Bloque* resultado, Bloque* entrada) {
 	permutacion(resultado, entrada, PC2, BITS_IN_PC2);
 }
 
-void rondaDES(Bloque* izqSalida, Bloque* derSalida, Bloque* izqEntrada, Bloque* derEntrada, Bloque* clave, int nRonda) {
+void rondaDES(Bloque* izqSalida, Bloque* derSalida, Bloque* izqEntrada, Bloque* derEntrada, Bloque* clave) {
 
 	Bloque eBlock, xBlock, bloqueTrasSBOX, pBlock;
 
