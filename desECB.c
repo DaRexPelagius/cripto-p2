@@ -823,14 +823,26 @@ void DES(Bloque* resultado, Bloque* entrada, Bloque* clave, int modo) {
 	//IP^⁽⁻¹⁾
 	invPermArranque(resultado, &bloqueTrasSwap);
 }
-//Left Circular Shift
+/*--------------------------------------------------------------------------
+Realiza un desplazamiento circular a la izquierda
+- Entrada:
+	* Resultado
+	* Entrada
+	* Numero de ronda
+	* Modo
+--------------------------------------------------------------------------*/
 void LCS(Bloque* resultado, Bloque* entrada, int nRonda, int modo) {
 
 	if (modo == 1) shiftLeftDES(resultado, entrada, ROUND_SHIFTS[nRonda - 1]);
 	else if (modo == 2) shiftRightDES(resultado, entrada, ROUND_SHIFTS_DEC[nRonda - 1]);
 }
-
-//ShiftLeftDES @ Des.c
+/*--------------------------------------------------------------------------
+Realiza en desplazamiento a la izquierda en DES (Li)
+- Entrada:
+	* Resultado
+	* Entrada
+	* Cambio
+--------------------------------------------------------------------------*/
 void shiftLeftDES(Bloque* resultado, Bloque* entrada, int cambio) {
 
 	int i;
@@ -840,7 +852,13 @@ void shiftLeftDES(Bloque* resultado, Bloque* entrada, int cambio) {
 	for (i=0; i < BITS_MEDIOBLOQUE; i++) resultado->bloque[i + BITS_MEDIOBLOQUE + 1] = entrada->bloque[((i + cambio) % (BITS_MEDIOBLOQUE)) 
 												+ BITS_MEDIOBLOQUE + 1];
 }
-//ShiftRightDES @ Des.c
+/*--------------------------------------------------------------------------
+Realiza en desplazamiento a la derecha en DES (Di)
+- Entrada:
+	* Resultado
+	* Entrada
+	* Cambio
+--------------------------------------------------------------------------*/
 void shiftRightDES(Bloque* resultado, Bloque* entrada, int cambio) {
 
 	int i;
@@ -851,23 +869,37 @@ void shiftRightDES(Bloque* resultado, Bloque* entrada, int cambio) {
 		resultado->bloque[i + BITS_MEDIOBLOQUE + 1] = entrada->bloque[((i - cambio + BITS_MEDIOBLOQUE) % (BITS_MEDIOBLOQUE)) 
 								+ BITS_MEDIOBLOQUE + 1];
 }
-
-//Permutacion con los valores que nos dan en el enunciado
-//Initial permutacionF_DES.
+/*--------------------------------------------------------------------------
+Permutacion con los valores que nos dan en el enunciado
+- Entrada:
+	* Resultado
+	* Entrada
+--------------------------------------------------------------------------*/
 void permArranque(Bloque* resultado, Bloque* entrada) {
 	permutacion(resultado, entrada, IP, BITS_IN_IP);
 }
 
-//Permuta los valores del bloque
+/*--------------------------------------------------------------------------
+Permuta los valores del bloque
+- Entrada:
+	* Resultado
+	* Entrada
+	* Indices
+	* Longitud
+--------------------------------------------------------------------------*/
 void permutacion(Bloque* resultado, Bloque* entrada, const unsigned short* indices, int lon) {
 
 	int i;
 
 	for (i = 1; i <= lon; i++) resultado->bloque[i] = entrada->bloque[indices[i - 1]];
 }
-
-
-
+/*--------------------------------------------------------------------------
+Cambio de bloque a texto
+- Entrada:
+	* Texto
+	* Bloque b
+	* Tamaño del bloque
+--------------------------------------------------------------------------*/
 void bloque2Texto(char* texto, Bloque* b, int tamBloque) {
 
 	int i;
@@ -875,8 +907,12 @@ void bloque2Texto(char* texto, Bloque* b, int tamBloque) {
 
 	for (i=0; i < nBytes; i++) bin2Char(((uint8_t*) texto) + i, b->bloque + 8 * i + 1);
 }
-
-
+/*--------------------------------------------------------------------------
+Cambio de char a binario
+- Entrada:
+	* Numero binario
+	* Caracter
+--------------------------------------------------------------------------*/
 void char2Bin(uint8_t* bin, uint8_t c) {
 
 	int i;
@@ -887,7 +923,12 @@ void char2Bin(uint8_t* bin, uint8_t c) {
 		c = c / 2;
 	}
 }
-
+/*--------------------------------------------------------------------------
+Cambio de binario a hexadecimal
+- Entrada:
+	* Caracter
+	* Hexadecimal
+--------------------------------------------------------------------------*/
 void bin2Hex(char* c, uint8_t* bin) {
 
 	int i;
@@ -902,7 +943,12 @@ void bin2Hex(char* c, uint8_t* bin) {
 	if (valor < 10)	(*c) = '0' + valor;
 	else (*c) = 'A' + valor - 10;
 }
-
+/*--------------------------------------------------------------------------
+Cambio de hexadecimal a binario
+- Entrada:
+	* Caracter
+	* Hexadecimal
+--------------------------------------------------------------------------*/
 void hex2Bin(uint8_t* bin, char hex) {
 
 	int i, valorDecimal = 0;
@@ -916,8 +962,14 @@ void hex2Bin(uint8_t* bin, char hex) {
 		valorDecimal = valorDecimal / 2;
 	}
 }
-
-
+/*--------------------------------------------------------------------------
+Realiza el xor del DES
+- Entrada:
+	* Resultado
+	* Entrada 1
+	* Entrada 2
+	* Longitud
+--------------------------------------------------------------------------*/
 void xorDES(Bloque* resultado, Bloque* entrada1, Bloque* entrada2, int length) {
 
 	int i;
@@ -925,7 +977,12 @@ void xorDES(Bloque* resultado, Bloque* entrada1, Bloque* entrada2, int length) {
 	for (i = 1; i <= length; i++) 
 		resultado->bloque[i] = (entrada1->bloque[i] != entrada2->bloque[i]);
 }
-
+/*--------------------------------------------------------------------------
+Cambio de binario a char
+- Entrada:
+	* Caracter
+	* Binario
+--------------------------------------------------------------------------*/
 void bin2Char(uint8_t* c, uint8_t* bin) {
 
 	int i;
@@ -938,16 +995,24 @@ void bin2Char(uint8_t* c, uint8_t* bin) {
 		pow *= 2;
 	}
 }
-
-
+/*--------------------------------------------------------------------------
+Funcion que selecciona la mitad de la izquierda de un bloque
+- Entrada:
+	* Bloque de entrada
+	* Bloque con la mitad de la izquierda
+--------------------------------------------------------------------------*/
 void getMitadIzq(Bloque* resultado, Bloque* entrada) {
 
 	int i;
 	//Cogemos los 32 primeros bits(1-32), recordamos que en bloque->bloque[0] no hay nada util
 	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++) resultado->bloque[i] = entrada->bloque[i];
 }
-
-
+/*--------------------------------------------------------------------------
+Funcion que selecciona la mitad de la derecha de un bloque
+- Entrada:
+	* Bloque de entrada
+	* Bloque con la mitad de la derecha
+--------------------------------------------------------------------------*/
 void getMitadDer(Bloque* resultado, Bloque* entrada) {
 
 	int i;
@@ -955,18 +1020,36 @@ void getMitadDer(Bloque* resultado, Bloque* entrada) {
 	//Cogemos los 32 ultimos bits(33-64), recordamos que en bloque->bloque[0] no hay nada util
 	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++) resultado->bloque[i] = entrada->bloque[i + BITS_IN_FEISTEL / 2];
 }
-
+/*--------------------------------------------------------------------------
+Funcion que realiza el PC1 del DES
+- Entrada:
+	* Bloque de entrada
+	* Bloque con el resultado
+--------------------------------------------------------------------------*/
 void permutacionClave1(Bloque* resultado, Bloque* entrada) {
 	permutacion(resultado, entrada, PC1, BITS_IN_PC1);
 }
-
-
-
-
+/*--------------------------------------------------------------------------
+Funcion que realiza el PC2 del DES
+- Entrada:
+	* Bloque de entrada
+	* Bloque con el resultado
+--------------------------------------------------------------------------*/
 void permutacionClave2(Bloque* resultado, Bloque* entrada) {
 	permutacion(resultado, entrada, PC2, BITS_IN_PC2);
 }
 
+/*--------------------------------------------------------------------------
+Funcion encargada de realizar la logica de cada ronda del DES:
+	-L(i) = R(i-1)
+	-R(i) = L(i-1) + F(R(i-1), k(i))
+- Entrada:
+	* Bloque de entrada parte izquierda (L(i-1))
+	* Bloque de entrada parte derecha (R(i-1))
+	* Bloque de salida parte izquierda (L(i))
+	* Bloque de salida parte derecha (R(i))
+	* Clave
+--------------------------------------------------------------------------*/
 void rondaDES(Bloque* izqSalida, Bloque* derSalida, Bloque* izqEntrada, Bloque* derEntrada, Bloque* clave) {
 
 	Bloque eBlock, xBlock, bloqueTrasSBOX, pBlock;
@@ -983,18 +1066,35 @@ void rondaDES(Bloque* izqSalida, Bloque* derSalida, Bloque* izqEntrada, Bloque* 
 	//Y recordamos que R(i) = L(i-1) + F(R(i-1), k(i)), siendo el mas la suma exclusiva
 	xorDES(derSalida, izqEntrada, &pBlock, BITS_IN_P);
 }
-
+/*--------------------------------------------------------------------------
+Expansion de R(i-1) necesaria en la funcion F de DES
+- Entrada:
+	* Bloque entrada
+	* Bloque resultado
+--------------------------------------------------------------------------*/
 void expansion(Bloque* resultado, Bloque* entrada) {
 	permutacion(resultado, entrada, E, BITS_IN_E);
 }
-
+/*--------------------------------------------------------------------------
+Copia un bloque
+- Entrada:
+	* Bloque entrada
+	* Bloque resultado
+	* Longitud del bloque
+--------------------------------------------------------------------------*/
 void copiarBloque(Bloque* resultado, Bloque* entrada, int lon) {
 
 	int i;
 
 	for (i = 1; i <= lon; i++) resultado->bloque[i] = entrada->bloque[i];
 }
-
+/*--------------------------------------------------------------------------
+Une dos bloques
+- Entrada:
+	* Bloque resultado
+	* Mitad izquierda
+	* Mitad derecha
+--------------------------------------------------------------------------*/
 void unirBloques(Bloque* bloque, Bloque* medizq, Bloque* medder) {
 
 	int i;
@@ -1004,17 +1104,31 @@ void unirBloques(Bloque* bloque, Bloque* medizq, Bloque* medder) {
 		bloque->bloque[BITS_IN_FEISTEL / 2 + i] = medder->bloque[i];
 	}
 }
-
+/*--------------------------------------------------------------------------
+Realiza el swap (con la permutacion proporcionada en Moodle) del DES
+- Entrada:
+	* Bloque entrada
+	* Bloque resultado
+--------------------------------------------------------------------------*/
 void swap(Bloque* resultado, Bloque* entrada) {
 	permutacion(resultado, entrada, SWAP, BITS_IN_SWAP);
 }
-
+/*--------------------------------------------------------------------------
+Realiza la inveresa de la permutación Inicial (IP^-1) del DES
+- Entrada:
+	* Bloque entrada
+	* Bloque resultado
+--------------------------------------------------------------------------*/
 void invPermArranque(Bloque* resultado, Bloque* entrada) {
 	permutacion(resultado, entrada, IP_INV, BITS_IN_IP);
 }
 
-
-
+/*--------------------------------------------------------------------------
+Realiza la funcionalidad de las Sboxes
+- Entrada:
+	* Bloque entrada
+	* Bloque resultado
+--------------------------------------------------------------------------*/
 void SBox(Bloque* resultado, Bloque* entrada) {
 
 	int i, fila, col;
@@ -1032,7 +1146,12 @@ void SBox(Bloque* resultado, Bloque* entrada) {
 		resultado->bloque[1 + i * 4] = (value / 8) % 2;
 	}
 }
-
+/*--------------------------------------------------------------------------
+Realiza la permutacion F del DES
+- Entrada:
+	* Bloque entrada
+	* Bloque resultado
+--------------------------------------------------------------------------*/
 void permutacionF_DES(Bloque* resultado, Bloque* entrada) {
 	permutacion(resultado, entrada, P, BITS_IN_P);
 }
