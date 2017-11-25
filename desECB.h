@@ -48,17 +48,14 @@ DATA STRUCTURES
 
 //Bloque de DES
 typedef struct {
-	uint8_t bloque[TAM_BLOQUE + 1];
+	uint8_t bloque[TAM_BLOQUE + 1];//bloque[0] no lo usamos
 } Bloque;
 
 //Parametros de CBC
 typedef struct {
 	Bloque clave;
-	Bloque SR;
-	Bloque IV;
-	int lenVecIni;
 	int tamBloque;
-} CBC;
+} ECB;
 
 
 int getArgs(int nArgs, char** args, int* flag, char* clave, int* tamBloque, char* bufferVecIni, int* lenVecIni, char* formatoEntrada, char* formatoSalida, char* ficheroentrada, int* entrada, char* ficherosalida, int* salida);
@@ -67,12 +64,12 @@ int getCadena(int nArgs, char** args, char* string, char* flag, int flagLength);
 int getFormato(int nArgs, char** args, char* formato, char* flag, int flagLength);
 int getModo(int nArgs, char** args, int* modo);
 void imprimirSalida(FILE* fsalida, char formato, char* texto, int lon);
-int prepararCBC(char* clave, char* bufferVecIni, int lenVecIni, int tamBloque, CBC* cbc);
+int prepararECB(char* clave, int tamBloque, ECB* ecb);
 void padding(char* texto, int* lon, int number, char padChar);
 void imprimirSalida(FILE* fsalida, char formato, char* texto, int lon);
 int leerEntrada(FILE* fentrada, char formato, char* texto, int maxLon);
 void imprimirClave(FILE* fsalida, Bloque* clave);
-void CFBmode(int modo, char* textoplano, char* textocifrado, int lon, CBC* cbc);
+void modoECB(int modo, char* textoplano, char* textocifrado, int lon, ECB* ecb);
 int esValida(Bloque* clave);
 int hex2Bloque(Bloque* newbloque, char* string, int length);
 void char2Hex(char* hex, uint8_t c);
@@ -82,29 +79,28 @@ void imprimirBloqueHexadecimal(FILE* fsalida, Bloque* b, int tamBloque, char* te
 int comprobarHex(char hex);
 void hex2Char(uint8_t* c, char* hex);
 void texto2Bloque(Bloque* b, char* texto, int tamBloque);
-void CFBstep(int flag, Bloque* bloqueTextoPlano, Bloque* bloqueTextoCifrado, CBC* cbc);
+void fECB(int flag, Bloque* bloqueTextoPlano, Bloque* bloqueTextoCifrado, ECB* ecb);
+void DES(Bloque* output, Bloque* input, Bloque* clave, int flag);
 void bloque2Texto(char* texto, Bloque* b, int tamBloque);
-void shiftRegister(Bloque* output, Bloque* input, int shift);
 void char2Bin(uint8_t* bin, uint8_t c);
 void bin2Hex(char* c, uint8_t* bin);
 void hex2Bin(uint8_t* bin, char hex);
-void DES(Bloque* output, Bloque* input, Bloque* clave, int flag);
-void xorDES(Bloque* new, Bloque* old1, Bloque* old2, int length);
+void xorDES(Bloque* resultado, Bloque* old1, Bloque* old2, int length);
 void bin2Char(uint8_t* c, uint8_t* bin);
-void initialPerm(Bloque* new, Bloque* old);
-void leftSemiBlock(Bloque* semiBlock, Bloque* fullBlock);
-void rightSemiBlock(Bloque* semiBlock, Bloque* fullBlock);
-void permChoice1(Bloque* new, Bloque* old);
-void LCS(Bloque* new, Bloque* old, int nRound, int flag);
-void shiftLeftDES(Bloque* new, Bloque* old, int shift);
-void shiftRightDES(Bloque* new, Bloque* old, int shift);
-void permChoice2(Bloque* new, Bloque* old);
-void singleRound(Bloque* izqSalida, Bloque* derSalida, Bloque* izqEntrada, Bloque* derEntrada, Bloque* clave, int nRound);
-void copiarBloque(Bloque* new, Bloque* old, int length);
+void permArranque(Bloque* resultado, Bloque* entrada);
+void getMitadIzq(Bloque* resultado, Bloque* entrada);
+void getMitadDer(Bloque* resultado, Bloque* entrada);
+void permutacionClave1(Bloque* resultado, Bloque* entrada);
+void permutacionClave2(Bloque* resultado, Bloque* entrada);
+void LCS(Bloque* resultado, Bloque* entrada, int nRonda, int modo);
+void shiftLeftDES(Bloque* resultado, Bloque* entrada, int shift);
+void shiftRightDES(Bloque* resultado, Bloque* entrada, int shift);
+void rondaDES(Bloque* izqSalida, Bloque* derSalida, Bloque* izqEntrada, Bloque* derEntrada, Bloque* clave);
+void copiarBloque(Bloque* resultado, Bloque* entrada, int length);
 void unirBloques(Bloque* fullbloque, Bloque* left, Bloque* right);
-void swap(Bloque* new, Bloque* old);
-void invInitialPerm(Bloque* new, Bloque* old);
-void selectDES(Bloque* new, Bloque* old, const unsigned short* indices, int length);
-void expansion(Bloque* new, Bloque* old);
-void SBox(Bloque* new, Bloque* old);
-void permutation(Bloque* new, Bloque* old);
+void swap(Bloque* resultado, Bloque* entrada);
+void invPermArranque(Bloque* resultado, Bloque* entrada);
+void permutacion(Bloque* resultado, Bloque* entrada, const unsigned short* indices, int length);
+void expansion(Bloque* resultado, Bloque* entrada);
+void SBox(Bloque* resultado, Bloque* entrada);
+void permutacionF_DES(Bloque* resultado, Bloque* entrada);

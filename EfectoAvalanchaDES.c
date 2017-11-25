@@ -200,42 +200,64 @@ int getArgs(int nArgs, char** args, int* nTests, char* outputFileName, int* flag
 	return 0;
 }
 
-int getInteger(int nArgs, char** args, int* integer, char* flag, int flagLength) {
+/*--------------------------------------------------------------------------
+Obtiene un entero
+- Entrada:
+	* Número de argumentos
+	* Array de argumentos
+	* Puntero al entero
+	* Puntero al modo
+	* Longitud de la cadena
+- Salida:
+	* -1 si ocurre algun error
+	* 1 si va bien
+--------------------------------------------------------------------------*/
+int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud) {
 
 	int i;
-	int found = 0;
+	int flag = 0;
 
-	for (i=1; i<=nArgs-2; i++)
-		if ((strncmp(args[i],flag,flagLength) == 0) && (strlen(args[i]) == flagLength)) {
-			if (found)
-				return -1;
+	for (i=1; i <= (nArgs - 2); i++){
+				
+		if ((strncmp(args[i], modo, longitud) == 0) && (strlen(args[i]) == longitud)) {
+			if (flag) return -1;
 			else {
-				*integer = atoi(args[i+1]);
-				if ((*integer == 0) && !isdigit(args[i+1][0]))
-					return -1;
-				found = 1;
+				*entero = atoi(args[i+1]);
+				if ((*entero == 0) && !isdigit(args[i + 1][0])) return -1;
+				flag = 1;
 			}
-		}
+		}}
 
-	return found;
+	return flag;
 }
-
-int getString(int nArgs, char** args, char* string, char* flag, int flagLength) {
+/*--------------------------------------------------------------------------
+Obtiene una cadena
+- Entrada:
+	* Número de argumentos
+	* Array de argumentos
+	* Puntero a la cadena
+	* Puntero al modo
+	* Longitud de la cadena
+- Salida:
+	* -1 si ocurre algun error
+	* 1 si va bien
+--------------------------------------------------------------------------*/
+int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 
 	int i;
-	int found = 0;
+	int flag = 0;
 
-	for (i=1; i<=nArgs-2; i++)
-		if ((strncmp(args[i],flag,flagLength) == 0) && (strlen(args[i]) == flagLength)) {
-			if (found)
+	for (i = 1; i <= (nArgs - 2); i++)
+		if ((strncmp(args[i], modo, longitud) == 0) && (strlen(args[i]) == longitud)) {
+			if (flag)
 				return -1;
 			else {
-				strcpy(string,args[i+1]);
-				found = 1;
+				strcpy(cadena, args[i+1]);
+				flag = 1;
 			}
 		}
 
-	return found;
+	return flag;
 }
 
 void measureAE(AE* statistics, int nTests) {
@@ -258,7 +280,7 @@ void measureAE(AE* statistics, int nTests) {
 	Sboxes = allocSboxes();
 	for (i=0; i<nTests; i++) {
 		newKey(&key);
-		newBlock(&input,DES_BLOCK_SIZE);
+		newBloque(&input,DES_BLOCK_SIZE);
 		singleTextAE(&input,&key,textBitChangesAcc,Sboxes);
 		singleKeyAE(&input,&key,keyBitChangesAcc, Sboxes);
 	}
@@ -295,9 +317,9 @@ void singleTextAE(DESblock* input, DESblock* key, unsigned long int* bitChangesA
 	int i;
 
 	/* Modifies the input */
-	copyBlock(&input2,input,DES_BLOCK_SIZE);
+	copiarBloque(&input2,input,DES_BLOCK_SIZE);
 	alterBlock(&input2,DES_BLOCK_SIZE);
-	bitChangesAcc[0] += countDifferences(input,&input2,DES_BLOCK_SIZE);
+	bitChangesAcc[0] += calculaDiferencias(input,&input2,DES_BLOCK_SIZE);
 
 	/* Initial permutation */
 	initialPerm(&ipBlock,input);
@@ -321,14 +343,14 @@ void singleTextAE(DESblock* input, DESblock* key, unsigned long int* bitChangesA
 		singleRoundGeneral(&newLeft,&newRight,&oldLeft,&oldRight,&roundKey,i,Sboxes);
 		singleRoundGeneral(&newLeft2,&newRight2,&oldLeft2,&oldRight2,&roundKey,i, Sboxes);
 
-		bitChangesAcc[i] += countDifferences(&newLeft,&newLeft2,BITS_IN_FEISTEL/2);
-		bitChangesAcc[i] += countDifferences(&newRight,&newRight2,BITS_IN_FEISTEL/2);
+		bitChangesAcc[i] += calculaDiferencias(&newLeft,&newLeft2,BITS_IN_FEISTEL/2);
+		bitChangesAcc[i] += calculaDiferencias(&newRight,&newRight2,BITS_IN_FEISTEL/2);
 
-		copyBlock(&oldLeft,&newLeft,BITS_IN_FEISTEL/2);
-		copyBlock(&oldRight,&newRight,BITS_IN_FEISTEL/2);
-		copyBlock(&oldLeft2,&newLeft2,BITS_IN_FEISTEL/2);
-		copyBlock(&oldRight2,&newRight2,BITS_IN_FEISTEL/2);
-		copyBlock(&oldKey,&newKey,BITS_IN_PC1);
+		copiarBloque(&oldLeft,&newLeft,BITS_IN_FEISTEL/2);
+		copiarBloque(&oldRight,&newRight,BITS_IN_FEISTEL/2);
+		copiarBloque(&oldLeft2,&newLeft2,BITS_IN_FEISTEL/2);
+		copiarBloque(&oldRight2,&newRight2,BITS_IN_FEISTEL/2);
+		copiarBloque(&oldKey,&newKey,BITS_IN_PC1);
 	}
 }
 
@@ -343,7 +365,7 @@ void singleKeyAE(DESblock* input, DESblock* key, unsigned long int* bitChangesAc
 	int i;
 
 	/* Modifies the key */
-	copyBlock(&key2,key,DES_KEY_SIZE);
+	copiarBloque(&key2,key,DES_KEY_SIZE);
 	alterBlock(&key2,DES_KEY_SIZE);
 
 	/* Initial permutation */
@@ -352,8 +374,8 @@ void singleKeyAE(DESblock* input, DESblock* key, unsigned long int* bitChangesAc
 	/* Splits the block into the two halves */
 	leftSemiBlock(&oldLeft,&ipBlock);
 	rightSemiBlock(&oldRight,&ipBlock);
-	copyBlock(&oldLeft2,&oldLeft,BITS_IN_FEISTEL/2);
-	copyBlock(&oldRight2,&oldRight,BITS_IN_FEISTEL/2);
+	copiarBloque(&oldLeft2,&oldLeft,BITS_IN_FEISTEL/2);
+	copiarBloque(&oldRight2,&oldRight,BITS_IN_FEISTEL/2);
 
 	/* Permutation Choice 1 */
 	permChoice1(&oldKey,key);
@@ -370,65 +392,58 @@ void singleKeyAE(DESblock* input, DESblock* key, unsigned long int* bitChangesAc
 		singleRoundGeneral(&newLeft,&newRight,&oldLeft,&oldRight,&roundKey,i,Sboxes);
 		singleRoundGeneral(&newLeft2,&newRight2,&oldLeft2,&oldRight2,&roundKey2,i,Sboxes);
 
-		bitChangesAcc[i] += countDifferences(&newLeft,&newLeft2,BITS_IN_FEISTEL/2);
-		bitChangesAcc[i] += countDifferences(&newRight,&newRight2,BITS_IN_FEISTEL/2);
+		bitChangesAcc[i] += calculaDiferencias(&newLeft,&newLeft2,BITS_IN_FEISTEL/2);
+		bitChangesAcc[i] += calculaDiferencias(&newRight,&newRight2,BITS_IN_FEISTEL/2);
 
-		copyBlock(&oldLeft,&newLeft,BITS_IN_FEISTEL/2);
-		copyBlock(&oldRight,&newRight,BITS_IN_FEISTEL/2);
-		copyBlock(&oldLeft2,&newLeft2,BITS_IN_FEISTEL/2);
-		copyBlock(&oldRight2,&newRight2,BITS_IN_FEISTEL/2);
-		copyBlock(&oldKey,&newKey,BITS_IN_PC1);
-		copyBlock(&oldKey2,&newKey2,BITS_IN_PC1);
+		copiarBloque(&oldLeft,&newLeft,BITS_IN_FEISTEL/2);
+		copiarBloque(&oldRight,&newRight,BITS_IN_FEISTEL/2);
+		copiarBloque(&oldLeft2,&newLeft2,BITS_IN_FEISTEL/2);
+		copiarBloque(&oldRight2,&newRight2,BITS_IN_FEISTEL/2);
+		copiarBloque(&oldKey,&newKey,BITS_IN_PC1);
+		copiarBloque(&oldKey2,&newKey2,BITS_IN_PC1);
 	}
 }
 
-void newKey(DESblock* key) {
+void newClave(Bloque* clave) {
 
 	int byte, bit;
 	int acc;
 
-	for (byte=0; byte<DES_KEY_SIZE/8; byte++) {
+	for (byte = 0; byte < (TAM_CLAVE / 8); byte++) {
 		acc = 0;
-		for (bit=0; bit<7; bit++)
-			acc += (key->block[8*byte+bit+1] = randomInt(0,1));
-		key->block[8*byte+7+1] = (acc%2 == 0);
+		for (bit = 0; bit < 7; bit++) acc += (clave->bloque[8 * byte + bit + 1] = naleatorio(0,1));
+		clave->bloque[8 * byte + 7 + 1] = (acc % 2 == 0);
 	}
 }
 
-void newBlock(DESblock* b, int blockSize) {
+void newBloque(DESblock* b, int tamBloque) {
 
 	int i;
 
-	for (i=1; i<=blockSize; i++)
-		b->block[i] = randomInt(0,1);
+	for (i = 1; i <= tamBloque; i++) b->block[i] = naleatorio(0,1);
 }
 
-void copyBlock(DESblock* new, DESblock* old, int length) {
+void copiarBloque(DESblock* new, DESblock* old, int length) {
 
 	int i;
 
-	for (i=1; i <= length; i++)
-		new->block[i] = old->block[i];
+	for (i = 1; i <= length; i++) new->block[i] = old->block[i];
 }
 
-void alterBlock(DESblock* b, int blockSize) {
+void alterBlock(DESblock* b, int tamBloque) {
 
-	int i = randomInt(1,blockSize);
+	int i = naleatorio(1,tamBloque);
 
-	if (b->block[i] == 0)
-		b->block[i] = 1;
-	else
-		b->block[i] = 0;
+	if (b->block[i] == 0) b->block[i] = 1;
+	else b->block[i] = 0;
 }
 
-int countDifferences(DESblock* b1, DESblock* b2, int blockSize) {
+int calculaDiferencias(DESblock* b1, DESblock* b2, int tamBloque) {
 
 	int i;
 	int n = 0;
 
-	for (i=1; i<= blockSize; i++)
-		if (b1->block[i] != b2->block[i])
-			n++;
+	for (i=1; i<= tamBloque; i++) if (b1->block[i] != b2->block[i]) n++;
 
 	return n;
 }
@@ -480,7 +495,7 @@ void singleRoundGeneral(DESblock* newLeft, DESblock* newRight, DESblock* oldLeft
 	permutation(&pBlock,&sBlock);
 
 	/* L(i) = R(i-1) */
-	copyBlock(newLeft,oldRight,BITS_IN_FEISTEL/2);
+	copiarBloque(newLeft,oldRight,BITS_IN_FEISTEL/2);
 
 	/* R(i) = L(i-1) xor F(R(i-1),k(i)) */
 	xorDES(newRight,oldLeft,&pBlock,BITS_IN_P);
@@ -547,12 +562,11 @@ void permutation(DESblock* new, DESblock* old) {
 	selectDES(new, old, P, BITS_IN_P);
 }
 
-int randomInt(int lowerLimit, int upperLimit) {
+int naleatorio(int a, int b) {
 
-	if (lowerLimit >= upperLimit)
-		return lowerLimit;
+	if (a >= b) return a;
 
-	return lowerLimit + (rand() % (upperLimit-lowerLimit+1));
+	return a + (rand() % (b - a + 1));
 }
 
 unsigned short*** allocSboxes() {

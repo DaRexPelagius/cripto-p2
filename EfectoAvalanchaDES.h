@@ -52,18 +52,18 @@ typedef struct {
 
 
 
-int getInteger(int nArgs, char** args, int* integer, char* flag, int flagLength);
 int getArgs(int nArgs, char** args, int* nTests, char* outputFileName, int* flagOutput);
-int getString(int nArgs, char** args, char* string, char* flag, int flagLength);
+int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud);
+int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud);
 void measureAE(AE* statistics, int nTests);
 void printAE(FILE* outputFile, AE* statistics);
 void singleTextAE(DESblock* input, DESblock* key, unsigned long int* bitChangesAcc, short unsigned int*** Sboxes);
 void singleKeyAE(DESblock* input, DESblock* key, unsigned long int* bitChangesAcc, short unsigned int*** Sboxes);
-void newKey(DESblock* key);
-void newBlock(DESblock* b, int blockSize);
-void copyBlock(DESblock* new, DESblock* old, int length);
-void alterBlock(DESblock* b, int blockSize);
-int countDifferences(DESblock* b1, DESblock* b2, int blockSize);
+void newClave(Bloque* clave);
+void newBloque(DESblock* b, int tamBloque);
+void copiarBloque(DESblock* new, DESblock* old, int length);
+void alterBlock(DESblock* b, int tamBloque);
+int calculaDiferencias(DESblock* b1, DESblock* b2, int tamBloque);
 void initialPerm(DESblock* new, DESblock* old);
 void leftSemiBlock(DESblock* semiBlock, DESblock* fullBlock);
 void rightSemiBlock(DESblock* semiBlock, DESblock* fullBlock);
@@ -78,7 +78,7 @@ void expansion(DESblock* new, DESblock* old);
 void xorDES(DESblock* new, DESblock* old1, DESblock* old2, int length);
 void SBoxGeneral(DESblock* new, DESblock* old, short unsigned int*** Sbox);
 void permutation(DESblock* new, DESblock* old);
-int randomInt(int lowerLimit, int upperLimit);
+int naleatorio(int a, int b);
 unsigned short*** allocSboxes();
 void freeSboxes(unsigned short*** Sboxes);
 void printUsage(char* message);

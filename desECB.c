@@ -1,11 +1,11 @@
 
-#include "desCBC.h"
+#include "desECB.h"
 
 
 /*--------------------------------------------------------------------------
-cbc
+ecb
 --------------------------------------------------------------------------*/
-/* PC1 "permutation" */
+/* PC1 "permutacionF_DES" */
 static const unsigned short PC1[BITS_IN_PC1] = { 
 	57, 49, 41, 33, 25, 17, 9,
 	1, 58, 50, 42, 34, 26, 18,
@@ -17,7 +17,7 @@ static const unsigned short PC1[BITS_IN_PC1] = {
 	21, 13, 5, 28, 20, 12, 4
 };
 
-/* PC2 "permutation" */
+/* PC2 "permutacionF_DES" */
 static const unsigned short PC2[BITS_IN_PC2] = {
 	14, 17, 11, 24, 1, 5,
 	3, 28, 15, 6, 21, 10,
@@ -39,7 +39,7 @@ static const unsigned short ROUND_SHIFTS_DEC[RONDAS] = {
 	0, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
 };
 
-/* IP permutation */
+/* IP permutacionF_DES */
 static const unsigned short IP[BITS_IN_IP] = {
 	58, 50, 42, 34, 26, 18, 10, 2,
 	60, 52, 44, 36, 28, 20, 12, 4,
@@ -75,7 +75,7 @@ static const unsigned short E[BITS_IN_E] = {
 	28, 29, 30, 31, 32, 1
 };
 
-/* P permutation */
+/* P permutacionF_DES */
 static const unsigned short P[BITS_IN_P] = {
 	16, 7, 20, 21,
 	29, 12, 28, 17,
@@ -154,7 +154,7 @@ int main(int argc, char** argv) {
 	char ficherosalida[MAX_NOMBRE];
 	FILE* fentrada = NULL;
 	FILE* fsalida = NULL;
-	CBC cbc;
+	ECB ecb;
 	char textoplano[MAX_TEXTO];
 	char textocifrado[MAX_TEXTO];
 
@@ -221,9 +221,10 @@ int main(int argc, char** argv) {
 	} else fsalida = stdout;
 
 	//Preparamos la estructura DES
-	if (flag == 1) aux = prepararCBC(NULL, bufferVecIni, lenVecIni, tamBloque, &cbc);
-	else aux = prepararCBC(clave, bufferVecIni, lenVecIni, tamBloque, &cbc);
+	if (flag == 1) aux = prepararECB(NULL, tamBloque, &ecb);
+	else aux = prepararECB(clave, tamBloque, &ecb);
 	
+	//Si nos da error cerramos los ficheros
 	if (aux != 0) {
 		if (fentrada) fclose(fentrada);
 		if (fsalida) fclose(fsalida);
@@ -231,25 +232,24 @@ int main(int argc, char** argv) {
 	}
 
 	//Imprimimos la clave de Encriptacion 
-	if (flag == 1) imprimirClave(stdout, &(cbc.clave));
+	if (flag == 1) imprimirClave(stdout, &(ecb.clave));
 
 	//Si el programa se ejecuto como encriptacion, encriptamos
 	if (flag == 1) {
-		if (!entrada) fprintf(stdout, "textoplano:\n");
+		if (!entrada) fprintf(stdout, "Texto plano:\n");
 		lon = leerEntrada(fentrada, formatoEntrada, textoplano, MAX_TEXTO);
 		padding(textoplano, &lon, tamBloque, PADDING_CHAR);
-		CFBmode(flag, textoplano, textocifrado, lon, &cbc);
-		if (!salida) fprintf(stdout, "textocifrado:\n");
+		modoECB(flag, textoplano, textocifrado, lon, &ecb);
+		if (!salida) fprintf(stdout, "Texto cifrado:\n");
 		imprimirSalida(fsalida, formatoSalida, textocifrado, lon);
 	}
-
 	//Si el programa se ejecuto como desencriptacion, desencriptamos
 	else if (flag == 2) {
 		if (!entrada) fprintf(stdout,"textocifrado:\n");
-		lon = leerEntrada(fentrada,formatoEntrada,textocifrado,MAX_TEXTO);
-		CFBmode(flag,textoplano,textocifrado,lon,&cbc);
-		if (!salida) fprintf(stdout,"textoplano:\n");
-		imprimirSalida(fsalida,formatoSalida,textoplano,lon);
+		lon = leerEntrada(fentrada, formatoEntrada, textocifrado, MAX_TEXTO);
+		modoECB(flag, textoplano, textocifrado, lon, &ecb);
+		if (!salida) fprintf(stdout, "textoplano:\n");
+		imprimirSalida(fsalida, formatoSalida, textoplano, lon);
 	}
 
 	if (fentrada) fclose(fentrada);
@@ -423,31 +423,24 @@ void padding(char* texto, int* lon, int numero, char padChar) {
 }
 
 
-int prepararCBC(char* clave, char* bufferVecIni, int lenVecIni, int tamBloque, CBC* cbc) {
+int prepararECB(char* clave, int tamBloque, ECB* ecb) {
 
 	//Inicializamos la clave y comprobamos que es valida
 	if (clave) {
-		if (hex2Bloque(&(cbc->clave), clave, TAM_CLAVE) == -1){
+		if (hex2Bloque(&(ecb->clave), clave, TAM_CLAVE) == -1){
 			fprintf(stderr,"ERROR: Error en el formato de la clave.\n");
 			return -1;
-		}else if (!esValida(&(cbc->clave))){
+		}else if (!esValida(&(ecb->clave))){
 			fprintf(stderr,"ERROR: Clave no valida.\n");
 			return -1;
 		}
 	} else {//Inicializamos una clave aleatoria
 		srand(time(NULL));
-		newClave(&(cbc->clave));
+		newClave(&(ecb->clave));
 	}
-
-	//Preparamos el vector de inicializacion
-	if (hex2Bloque(&(cbc->IV), bufferVecIni, lenVecIni) == -1){
-		fprintf(stderr,"ERROR: Error en el formato del vector de inicializacion.\n");		
-		return -1;
-	}
-	cbc->lenVecIni = lenVecIni;
 
 	//Guardamos el tamanyo de bloque
-	cbc->tamBloque = tamBloque;
+	ecb->tamBloque = tamBloque;
 
 	return 0;
 }
@@ -504,30 +497,27 @@ int leerEntrada(FILE* fentrada, char formato, char* texto, int maxLon) {
 	return n;
 }
 
-void CFBmode(int modo, char* textoplano, char* textocifrado, int lon, CBC* cbc) {
+void modoECB(int modo, char* textoplano, char* textocifrado, int lon, ECB* ecb) {
 	
 	Bloque bloqueTextoPlano, bloqueTextoCifrado;
 	int i;
-	int l = cbc->lenVecIni;
-	int s = cbc->tamBloque;
-	int nBloques = lon * 8 / s;
-
-	//Preparamos los valores iniciales 
-	for (i = 1; i <= (TAM_BLOQUE - l); i++)	cbc->SR.bloque[i] = 0;
-	for (i = 1; i <= l; i++) cbc->SR.bloque[TAM_BLOQUE - l + i] = cbc->IV.bloque[i];
+	int tam = ecb->tamBloque; 
+	int nBloques = lon * 8 / tam;
 
 	//Segun el modo procedemos a cifrar o descifrar
+	//Cabe decir que ciframos sobre los bits asi que tenemos que pasar
+	//el texto a binario
 	if (modo == 1) {
 		for (i = 0; i < nBloques; i++) {
-			texto2Bloque(&bloqueTextoPlano, textoplano + i * s / 8, s);
-			CFBstep(modo, &bloqueTextoPlano, &bloqueTextoCifrado, cbc);
-			bloque2Texto(textocifrado + i * s / 8, &bloqueTextoCifrado, s);
+			texto2Bloque(&bloqueTextoPlano, textoplano + i * tam / 8, tam);
+			fECB(modo, &bloqueTextoPlano, &bloqueTextoCifrado, ecb);
+			bloque2Texto(textocifrado + i * tam / 8, &bloqueTextoCifrado, tam);
 		}
 	} else {
 		for (i=0; i < nBloques; i++) {
-			texto2Bloque(&bloqueTextoCifrado, textocifrado + i*s/8, s);
-			CFBstep(modo, &bloqueTextoPlano,&bloqueTextoCifrado,cbc);
-			bloque2Texto(textoplano + i*s/8, &bloqueTextoPlano, s);
+			texto2Bloque(&bloqueTextoCifrado, textocifrado + i * tam / 8, tam);
+			fECB(modo, &bloqueTextoPlano, &bloqueTextoCifrado, ecb);
+			bloque2Texto(textoplano + i * tam / 8, &bloqueTextoPlano, tam);
 		}
 	}
 }
@@ -640,21 +630,99 @@ void texto2Bloque(Bloque* b, char* texto, int tamBloque) {
 	for (i = 0; i < nBytes ; i++) char2Bin(b->bloque + i * 8 + 1, texto[i]);
 }
 
-void CFBstep(int flag, Bloque* bloqueTextoPlano, Bloque* bloqueTextoCifrado, CBC* cbc) {
-
-	int s = cbc->tamBloque;
-	Bloque salidaDES;
+//Funcion que aplica ECB, como ECB es la aplicacion directa de DES, simplemente llamamos a DES
+void fECB(int flag, Bloque* bloqueTextoPlano, Bloque* bloqueTextoCifrado, ECB* ecb) {
 
 	//Aplicamos DES
-	DES(&salidaDES, &(cbc->SR), &(cbc->clave), 1);
+	DES(bloqueTextoCifrado, bloqueTextoPlano, &(ecb->clave), 1);
 
-	//Hacemos XOR del mediobloque izq
-	if (flag == 1) xorDES(bloqueTextoCifrado, bloqueTextoPlano, &salidaDES, s);
-	else xorDES(bloqueTextoPlano, bloqueTextoCifrado, &salidaDES, s);
-
-	//Preparamos SR para la siguiente ronda
-	shiftRegister(&(cbc->SR), bloqueTextoCifrado, s);
 }
+
+
+//Operacion de DES
+void DES(Bloque* resultado, Bloque* entrada, Bloque* clave, int modo) {
+
+	Bloque izqEntrada, derEntrada, izqSalida, derSalida;
+	Bloque bloquePermIni, bloqueTrasRondas, bloqueTrasSwap;
+	Bloque claveEntrada, claveSalida, claveRonda;
+	int i;
+
+	//Permutamos la primera vez(Izq a Der y viceversa)
+	permArranque(&bloquePermIni, entrada);
+
+	//Dividimos en dos el bloque
+	getMitadIzq(&izqEntrada, &bloquePermIni);
+	getMitadDer(&derEntrada, &bloquePermIni);
+
+	//Realizamos la primera permutacion del esquema a la clave. PC1
+	permutacionClave1(&claveEntrada, clave);
+
+	//Procedemos ahora con las 16 rondas de DES
+	for (i = 1; i<= RONDAS; i++) {
+
+		LCS(&claveSalida, &claveEntrada, i, modo);//Left Circular Shift
+		permutacionClave2(&claveRonda, &claveSalida);
+
+		rondaDES(&izqSalida, &derSalida, &izqEntrada, &derEntrada, &claveRonda);
+
+		copiarBloque(&izqEntrada, &izqSalida, BITS_IN_FEISTEL/2);
+		copiarBloque(&derEntrada, &derSalida, BITS_IN_FEISTEL/2);
+		copiarBloque(&claveEntrada, &claveSalida, BITS_IN_PC1);
+	}
+
+	//Unimos los bloques
+	unirBloques(&bloqueTrasRondas, &izqEntrada, &derEntrada);
+
+	//Swap final de DES(32 bitd)
+	swap(&bloqueTrasSwap, &bloqueTrasRondas);
+
+	//IP^⁽⁻¹⁾
+	invPermArranque(resultado, &bloqueTrasSwap);
+}
+//Left Circular Shift
+void LCS(Bloque* resultado, Bloque* entrada, int nRonda, int modo) {
+
+	if (modo == 1) shiftLeftDES(resultado, entrada, ROUND_SHIFTS[nRonda - 1]);
+	else if (modo == 2) shiftRightDES(resultado, entrada, ROUND_SHIFTS_DEC[nRonda - 1]);
+}
+
+//ShiftLeftDES @ Des.c
+void shiftLeftDES(Bloque* resultado, Bloque* entrada, int cambio) {
+
+	int i;
+
+	for (i = 0; i < BITS_MEDIOBLOQUE; i++) 
+		resultado->bloque[i + 1] = entrada->bloque[((i + cambio) % (BITS_MEDIOBLOQUE)) + 1];
+	for (i=0; i < BITS_MEDIOBLOQUE; i++) resultado->bloque[i + BITS_MEDIOBLOQUE + 1] = entrada->bloque[((i + cambio) % (BITS_MEDIOBLOQUE)) 
+												+ BITS_MEDIOBLOQUE + 1];
+}
+//ShiftRightDES @ Des.c
+void shiftRightDES(Bloque* resultado, Bloque* entrada, int cambio) {
+
+	int i;
+
+	for (i = 0; i < BITS_MEDIOBLOQUE; i++)
+		resultado->bloque[i+1] = entrada->bloque[((i - cambio + BITS_MEDIOBLOQUE) % (BITS_MEDIOBLOQUE)) + 1];
+	for (i=0; i < BITS_MEDIOBLOQUE; i++) 
+		resultado->bloque[i + BITS_MEDIOBLOQUE + 1] = entrada->bloque[((i - cambio + BITS_MEDIOBLOQUE) % (BITS_MEDIOBLOQUE)) 
+								+ BITS_MEDIOBLOQUE + 1];
+}
+
+//Permutacion con los valores que nos dan en el enunciado
+//Initial permutacionF_DES.
+void permArranque(Bloque* resultado, Bloque* entrada) {
+	permutacion(resultado, entrada, IP, BITS_IN_IP);
+}
+
+//Permuta los valores del bloque
+void permutacion(Bloque* resultado, Bloque* entrada, const unsigned short* indices, int lon) {
+
+	int i;
+
+	for (i = 1; i <= lon; i++) resultado->bloque[i] = entrada->bloque[indices[i - 1]];
+}
+
+
 
 void bloque2Texto(char* texto, Bloque* b, int tamBloque) {
 
@@ -664,14 +732,6 @@ void bloque2Texto(char* texto, Bloque* b, int tamBloque) {
 	for (i=0; i < nBytes; i++) bin2Char(((uint8_t*) texto) + i, b->bloque + 8 * i + 1);
 }
 
-//FUNCION PROPIA DEL CFB
-void shiftRegister(Bloque* resultado, Bloque* entrada, int shift) {
-
-	int i;
-
-	for (i = 1; i <= TAM_BLOQUE - shift; i++) resultado->bloque[i] = resultado->bloque[i + shift];
-	for (i = 1; i <= shift; i++) resultado->bloque[i + TAM_BLOQUE - shift] = entrada->bloque[i];
-}
 
 void char2Bin(uint8_t* bin, uint8_t c) {
 
@@ -713,45 +773,6 @@ void hex2Bin(uint8_t* bin, char hex) {
 	}
 }
 
-void DES(Bloque* resultado, Bloque* entrada, Bloque* clave, int modo) {
-
-	Bloque izqEntrada, derEntrada, izqSalida, derSalida;
-	Bloque bloquePermIni, rBlock, sBlock;
-	Bloque claveEntrada, claveSalida, claveRonda;
-	int i;
-
-	//Permutamos la primera vez
-	initialPerm(&bloquePermIni, entrada);
-
-	//Calculamos las dos mitades
-	leftSemiBlock(&izqEntrada,&bloquePermIni);
-	rightSemiBlock(&derEntrada,&bloquePermIni);
-
-	//Realizamos una permutacion
-	permChoice1(&claveEntrada,clave);
-
-	//Ahora hacemos tantas rondas como hemos definido en la constante
-	for (i = 1; i<= RONDAS; i++) {
-
-		LCS(&claveSalida, &claveEntrada, i, modo);
-		permChoice2(&claveRonda, &claveSalida);
-
-		singleRound(&izqSalida, &derSalida, &izqEntrada, &derEntrada, &claveRonda, i);
-
-		copiarBloque(&izqEntrada,&izqSalida,BITS_IN_FEISTEL/2);
-		copiarBloque(&derEntrada,&derSalida,BITS_IN_FEISTEL/2);
-		copiarBloque(&claveEntrada,&claveSalida,BITS_IN_PC1);
-	}
-
-	/* Merges the semiblocks */
-	unirBloques(&rBlock,&izqEntrada,&derEntrada);
-
-	/* 32-bit swap */
-	swap(&sBlock,&rBlock);
-
-	/* Inverse permutation */
-	invInitialPerm(resultado,&sBlock);
-}
 
 void xorDES(Bloque* resultado, Bloque* entrada1, Bloque* entrada2, int length) {
 
@@ -774,72 +795,53 @@ void bin2Char(uint8_t* c, uint8_t* bin) {
 	}
 }
 
-void initialPerm(Bloque* resultado, Bloque* entrada) {
-	selectDES(resultado, entrada, IP, BITS_IN_IP);
+
+void getMitadIzq(Bloque* resultado, Bloque* entrada) {
+
+	int i;
+	//Cogemos los 32 primeros bits(1-32), recordamos que en bloque->bloque[0] no hay nada util
+	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++) resultado->bloque[i] = entrada->bloque[i];
 }
 
-void leftSemiBlock(Bloque* semiBlock, Bloque* fullBlock) {
+
+void getMitadDer(Bloque* resultado, Bloque* entrada) {
 
 	int i;
 
-	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++) semiBlock->bloque[i] = fullBlock->bloque[i];
+	//Cogemos los 32 ultimos bits(33-64), recordamos que en bloque->bloque[0] no hay nada util
+	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++) resultado->bloque[i] = entrada->bloque[i + BITS_IN_FEISTEL / 2];
+}
+
+void permutacionClave1(Bloque* resultado, Bloque* entrada) {
+	permutacion(resultado, entrada, PC1, BITS_IN_PC1);
 }
 
 
-void rightSemiBlock(Bloque* semiBlock, Bloque* fullBlock) {
 
-	int i;
 
-	for (i = 1; i <= BITS_IN_FEISTEL/2; i++)
-		semiBlock->bloque[i] = fullBlock->bloque[i + BITS_IN_FEISTEL / 2];
+void permutacionClave2(Bloque* resultado, Bloque* entrada) {
+	permutacion(resultado, entrada, PC2, BITS_IN_PC2);
 }
 
-void permChoice1(Bloque* resultado, Bloque* entrada) {
-	selectDES(resultado, entrada, PC1, BITS_IN_PC1);
+void rondaDES(Bloque* izqSalida, Bloque* derSalida, Bloque* izqEntrada, Bloque* derEntrada, Bloque* clave, int nRonda) {
+
+	Bloque eBlock, xBlock, bloqueTrasSBOX, pBlock;
+
+	//Aplicamos la funcion F de DES
+	expansion(&eBlock, derEntrada); //La mitad derecha la preparamos para sumar con la clave, 48bits
+	xorDES(&xBlock, &eBlock, clave, BITS_IN_E); //Hacemos xor de esa mitad derecha con la clave
+	SBox(&bloqueTrasSBOX, &xBlock); //Aplicamos las cajas al bloque resultante anterior
+	permutacionF_DES(&pBlock, &bloqueTrasSBOX); //Terminamos con la ultima permutacion de F_DES, 32bits
+
+	//Recordamos que L(i) = R(i-1). Asique copiamos el bloque para preparar la salida
+	copiarBloque(izqSalida, derEntrada, BITS_IN_FEISTEL / 2);
+
+	//Y recordamos que R(i) = L(i-1) + F(R(i-1), k(i)), siendo el mas la suma exclusiva
+	xorDES(derSalida, izqEntrada, &pBlock, BITS_IN_P);
 }
 
-void LCS(Bloque* resultado, Bloque* entrada, int nRound, int flag) {
-
-	if (flag == 1) shiftLeftDES(resultado, entrada, ROUND_SHIFTS[nRound-1]);
-	else if (flag == 2) shiftRightDES(resultado, entrada, ROUND_SHIFTS_DEC[nRound-1]);
-}
-
-//ShiftLeftDES @ Des.c
-void shiftLeftDES(Bloque* resultado, Bloque* entrada, int shift) {
-
-	int i;
-
-	for (i=0; i < BITS_MEDIOBLOQUE; i++) resultado->bloque[i+1] = entrada->bloque[((i+shift)%(BITS_MEDIOBLOQUE)) + 1];
-	for (i=0; i < BITS_MEDIOBLOQUE; i++) resultado->bloque[i+BITS_MEDIOBLOQUE+1] = entrada->bloque[((i+shift)%(BITS_MEDIOBLOQUE)) + BITS_MEDIOBLOQUE + 1];
-}
-//ShiftRightDES @ Des.c
-void shiftRightDES(Bloque* resultado, Bloque* entrada, int shift) {
-
-	int i;
-
-	for (i=0; i < BITS_MEDIOBLOQUE; i++) resultado->bloque[i+1] = entrada->bloque[((i-shift+BITS_MEDIOBLOQUE)%(BITS_MEDIOBLOQUE)) + 1];
-	for (i=0; i < BITS_MEDIOBLOQUE; i++) resultado->bloque[i+BITS_MEDIOBLOQUE+1] = entrada->bloque[((i-shift+BITS_MEDIOBLOQUE)%(BITS_MEDIOBLOQUE)) + BITS_MEDIOBLOQUE + 1];
-}
-
-void permChoice2(Bloque* resultado, Bloque* entrada) {
-	selectDES(resultado, entrada, PC2, BITS_IN_PC2);
-}
-
-void singleRound(Bloque* izqSalida, Bloque* derSalida, Bloque* izqEntrada, Bloque* derEntrada, Bloque* clave, int nRound) {
-
-	Bloque eBlock, xBlock, sBlock, pBlock;
-
-	/* F function */
-	expansion(&eBlock,derEntrada);
-	xorDES(&xBlock,&eBlock,clave,BITS_IN_E);
-	SBox(&sBlock,&xBlock);
-	permutation(&pBlock,&sBlock);
-
-	/* L(i) = R(i-1) */
-	copiarBloque(izqSalida,derEntrada,BITS_IN_FEISTEL/2);
-
-	/* R(i) = L(i-1) xor F(R(i-1),k(i)) */
-	xorDES(derSalida,izqEntrada,&pBlock,BITS_IN_P);
+void expansion(Bloque* resultado, Bloque* entrada) {
+	permutacion(resultado, entrada, E, BITS_IN_E);
 }
 
 void copiarBloque(Bloque* resultado, Bloque* entrada, int lon) {
@@ -860,24 +862,14 @@ void unirBloques(Bloque* bloque, Bloque* medizq, Bloque* medder) {
 }
 
 void swap(Bloque* resultado, Bloque* entrada) {
-	selectDES(resultado, entrada, SWAP, BITS_IN_SWAP);
+	permutacion(resultado, entrada, SWAP, BITS_IN_SWAP);
 }
 
-void invInitialPerm(Bloque* resultado, Bloque* entrada) {
-	selectDES(resultado, entrada, IP_INV, BITS_IN_IP);
+void invPermArranque(Bloque* resultado, Bloque* entrada) {
+	permutacion(resultado, entrada, IP_INV, BITS_IN_IP);
 }
 
-void selectDES(Bloque* resultado, Bloque* entrada, const unsigned short* indices, int length) {
 
-	int i;
-
-	for (i=1; i <= length; i++)
-		resultado->bloque[i] = entrada->bloque[indices[i-1]];
-}
-
-void expansion(Bloque* resultado, Bloque* entrada) {
-	selectDES(resultado, entrada, E, BITS_IN_E);
-}
 
 void SBox(Bloque* resultado, Bloque* entrada) {
 
@@ -897,8 +889,8 @@ void SBox(Bloque* resultado, Bloque* entrada) {
 	}
 }
 
-void permutation(Bloque* resultado, Bloque* entrada) {
-	selectDES(resultado, entrada, P, BITS_IN_P);
+void permutacionF_DES(Bloque* resultado, Bloque* entrada) {
+	permutacion(resultado, entrada, P, BITS_IN_P);
 }
 
 
