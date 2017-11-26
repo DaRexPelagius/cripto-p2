@@ -1,0 +1,16 @@
+Ejercicio 2:
+-desECB --- de momento no funciona
+-desCBC --- no funciona
+
+Estos dos son de tu cosecha, asi que no hay pruebas previas
+
+Ejercicio 3:
+a-> Fichero NL_DES. Juntado, compila, probado -> tiene muy buena pinta
+b-> Fichero EfectoAvalancheDES. Al juntarlo, compilaba, ahora hay cambios que faltan por hacer en el .h
+c-> Fichero SAC_BIC_DES Juntado, compila, a priori funciona (ejecuto y saca probabilidades).
+d-> No esta
+
+Ejercicio 4
+
+a-> Fichero NL_AES . Juntado, compila probado -> tiene muy buena pinta
+b-> No esta
