@@ -6,14 +6,11 @@
 #include <math.h>
 #include <time.h>
 
-
 /*--------------------------------------------------------------------------
-CONSTANTS
---------------------------------------------------------------------------*/
-#define ERR_N_ARGS -1
-#define ERR_FLAGS -2
-#define MAX_TEXT_LENGTH 10000
-#define MAX_NAME_LENGTH 256
+ CONSTANTS
+ --------------------------------------------------------------------------*/
+#define MAX_TEXTO 10000
+#define MAX_NOMBRE 256
 #define ENCRYPT_FLAG 1
 #define DECRYPT_FLAG 2
 #define DES_BLOCK_SIZE 64
@@ -38,56 +35,33 @@ CONSTANTS
 #define BITS_OUT_BOX 4
 #define BITS_IN_BYTE 8
 
-/* Parameters for the Non-Linearity statistics, in the range [0,1] (0 if 100% linear, 1 if 100% non-linear) */
+//Estructura para guardar algunos datos que concluimos de las pruebas
 typedef struct {
 	/* Expectation of linearity of each S-box */
-	float expectation[NUM_S_BOXES];
-	/* Standard deviation of linearity of each S-box */
-	float deviation[NUM_S_BOXES];
-	/* Distribution (percentage) of the number of bit coincidences of each S-box */
-	float distribution[NUM_S_BOXES*(SBOX_OUTPUT_BITS+1)];
+	float expectation[NUM_S_BOXES]; //
+	/* Standard desviacion of linearity of each S-box */
+	float desviacion[NUM_S_BOXES]; //Desviacion tipica de la linealidad de cada caja
+	float coincidencias[NUM_S_BOXES * (SBOX_OUTPUT_BITS + 1)]; //Porcentaje de coincidencias
 } NL;
 
-typedef struct POLYNOMIAL {
-	int degree;
-	int* coefficients;
-} strPolynomial;
-
 typedef struct {
-	uint8_t block[DES_BLOCK_SIZE+1];	/* block[0] is never used */
-} DESblock;
+	uint8_t bloque[DES_BLOCK_SIZE + 1]; /* block[0] is never used */
+} BloqueDES;
 
-
-void printUsage(char* message);
-int getArgs(int nArgs, char** args, int* nTests, char* outputFileName, int* flagOutput);
-int getString(int nArgs, char** args, char* string, char* flag, int flagLength);
-int getInteger(int nArgs, char** args, int* integer, char* flag, int flagLength);
-void printNL(FILE* outputFile, NL* statistics);
-void measureNL(NL* statistics, int nTests);
-unsigned short*** allocSboxes();
+int getArgs(int nArgs, char** args, int* nPruebas, char* ficherosalida,
+		int* salida);
+int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud);
+int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud);
+void imprimirSalida(FILE* outputFile, NL* resultados);
+void calcularEstadisticas(NL* resultados, int nPruebas);
+unsigned short*** guardarMemSboxes();
 void freeSboxes(unsigned short*** Sboxes);
-void singleNL(unsigned short*** Sboxes, unsigned long int* coincCounters);
-unsigned short*** getNewRandomSboxes();
-unsigned short*** getNewSboxes();
+void getDatos(unsigned short*** Sboxes, unsigned long int* coincidencias);
+unsigned short*** getresultadosRandomSboxes();
+unsigned short*** getresultadosSboxes();
 void getSboxes(unsigned short*** Sboxes);
-void newBlock(DESblock* b, int blockSize);
-void xorDES(DESblock* new, DESblock* old1, DESblock* old2, int length);
-void SBoxGeneral(DESblock* new, DESblock* old, short unsigned int*** Sbox);
-uint8_t codeDirect(uint8_t b, int k, int s);
-uint8_t affineTransformation(uint8_t b, int *matrix[], int *translation);
-int randomInt(int lowerLimit, int upperLimit);
-uint8_t inverse(uint8_t b, int* modCoefficients);
-void initPol(struct POLYNOMIAL* p);
-void setPol(struct POLYNOMIAL* p, int* coefs, int n);
-void byteToPoly(struct POLYNOMIAL *p, uint8_t b);
-void inversePol(struct POLYNOMIAL* dest, struct POLYNOMIAL* s, struct POLYNOMIAL* mod);
-uint8_t polyToByte(struct POLYNOMIAL* p);
-void freePol(struct POLYNOMIAL* p) ;
-int getDegree(struct POLYNOMIAL* p);
-void clearPol(struct POLYNOMIAL* p);
-void divPol(struct POLYNOMIAL* q, struct POLYNOMIAL* r, struct POLYNOMIAL* div, struct POLYNOMIAL* dvsr);
-void copyPol(struct POLYNOMIAL* dest, struct POLYNOMIAL* src);
-void setNthCoefficient(struct POLYNOMIAL* dest, int n);
-void shiftPol(struct POLYNOMIAL* dest, struct POLYNOMIAL* s, int n);
-void addPol(struct POLYNOMIAL* dest, struct POLYNOMIAL* s1, struct POLYNOMIAL* s2);
-void mulPol(struct POLYNOMIAL* dest, struct POLYNOMIAL* s1, struct POLYNOMIAL* s2);
+void nuevoBloque(BloqueDES* b, int blockSize);
+void xorDES(BloqueDES* resultados, BloqueDES* a, BloqueDES* b, int longitud);
+void SBoxGeneral(BloqueDES* resultados, BloqueDES* old,
+		short unsigned int*** Sbox);
+int naleatorio(int a, int b);
