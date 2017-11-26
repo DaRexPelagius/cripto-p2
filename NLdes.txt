@@ -1,0 +1,72 @@
+Datos sobre S-box numero 1:
+- Expectation:	0.53
+- Desviacion tipica:	0.23
+- Porcentaje de coincidencias en los bits:
+  - 0 coincidencias:	2.00%
+  - 1 coincidencias:	25.00%
+  - 2 coincidencias:	37.00%
+  - 3 coincidencias:	31.00%
+  - 4 coincidencias:	5.00%
+Datos sobre S-box numero 2:
+- Expectation:	0.51
+- Desviacion tipica:	0.27
+- Porcentaje de coincidencias en los bits:
+  - 0 coincidencias:	6.00%
+  - 1 coincidencias:	25.00%
+  - 2 coincidencias:	38.00%
+  - 3 coincidencias:	20.00%
+  - 4 coincidencias:	11.00%
+Datos sobre S-box numero 3:
+- Expectation:	0.47
+- Desviacion tipica:	0.24
+- Porcentaje de coincidencias en los bits:
+  - 0 coincidencias:	9.00%
+  - 1 coincidencias:	23.00%
+  - 2 coincidencias:	45.00%
+  - 3 coincidencias:	19.00%
+  - 4 coincidencias:	4.00%
+Datos sobre S-box numero 4:
+- Expectation:	0.56
+- Desviacion tipica:	0.23
+- Porcentaje de coincidencias en los bits:
+  - 0 coincidencias:	3.00%
+  - 1 coincidencias:	21.00%
+  - 2 coincidencias:	26.00%
+  - 3 coincidencias:	47.00%
+  - 4 coincidencias:	3.00%
+Datos sobre S-box numero 5:
+- Expectation:	0.53
+- Desviacion tipica:	0.26
+- Porcentaje de coincidencias en los bits:
+  - 0 coincidencias:	5.00%
+  - 1 coincidencias:	25.00%
+  - 2 coincidencias:	29.00%
+  - 3 coincidencias:	34.00%
+  - 4 coincidencias:	7.00%
+Datos sobre S-box numero 6:
+- Expectation:	0.54
+- Desviacion tipica:	0.26
+- Porcentaje de coincidencias en los bits:
+  - 0 coincidencias:	6.00%
+  - 1 coincidencias:	20.00%
+  - 2 coincidencias:	33.00%
+  - 3 coincidencias:	32.00%
+  - 4 coincidencias:	9.00%
+Datos sobre S-box numero 7:
+- Expectation:	0.52
+- Desviacion tipica:	0.26
+- Porcentaje de coincidencias en los bits:
+  - 0 coincidencias:	3.00%
+  - 1 coincidencias:	32.00%
+  - 2 coincidencias:	26.00%
+  - 3 coincidencias:	31.00%
+  - 4 coincidencias:	8.00%
+Datos sobre S-box numero 8:
+- Expectation:	0.54
+- Desviacion tipica:	0.25
+- Porcentaje de coincidencias en los bits:
+  - 0 coincidencias:	3.00%
+  - 1 coincidencias:	26.00%
+  - 2 coincidencias:	33.00%
+  - 3 coincidencias:	29.00%
+  - 4 coincidencias:	9.00%
