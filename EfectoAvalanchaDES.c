@@ -31,7 +31,6 @@ static const unsigned short IP[BITS_IN_IP] =
 				41, 33, 25, 17, 9, 1, 59, 51, 43, 35, 27, 19, 11, 3, 61, 53, 45,
 				37, 29, 21, 13, 5, 63, 55, 47, 39, 31, 23, 15, 7 };
 
-
 /* E expansion */
 static const unsigned short E[BITS_IN_E] = { 32, 1, 2, 3, 4, 5, 4, 5, 6, 7, 8,
 		9, 8, 9, 10, 11, 12, 13, 12, 13, 14, 15, 16, 17, 16, 17, 18, 19, 20, 21,
@@ -80,59 +79,62 @@ static const unsigned short S_BOXES[NUM_S_BOXES][ROWS_PER_SBOX][COLUMNS_PER_SBOX
 
 int main(int argc, char** argv) {
 
-	int nTests, flagOutput;
-	char outputFileName[MAX_NAME_LENGTH];
-	FILE* outputFile = NULL;
-	AE statistics;
+	int nPruebas, salida;
+	char ficherosalida[MAX_NAME_LENGTH];
+	FILE* fsalida = NULL;
+	Diferencias dif;
 
-	/* Gets command-line arguments */
-	switch (getArgs(argc, argv, &nTests, outputFileName, &flagOutput)) {
-	case ERR_N_ARGS:
-		printUsage("ERROR: Wrong number of command-line arguments\n");
-		return -1;
-	case ERR_FLAGS:
-		printUsage("ERROR: Wrong flags\n");
+	//Comprobamos que el numero de parametros de entrada es el adecuado
+	if ((argc != 3) && (argc != 5)) {
+		printf("El numero de parametros es erroneo.\n");
+		printf(
+				"Uso: ./EfectoAvalanchaDES {-n numero de pruebas} [-o fichero de salida] \n");
 		return -1;
 	}
 
-	/* Validates command-line arguments */
-	if (nTests < 1) {
-		fprintf(stderr, "ERROR: The number of tests must be greater than 0\n");
+	//Cogemos los argumentos de entrada
+	if (getArgs(argc, argv, &nPruebas, ficherosalida, &salida) == -1) {
+		printf("Los argumentos son erroneos.\n");
+		printf(
+				"Uso: ./EfectoAvalanchaDES {-n numero de pruebas} [-o fichero de salida] \n");
 		return -1;
 	}
 
-	if (flagOutput) {
-		if ((outputFile = fopen(outputFileName, "w")) == NULL) {
-			fprintf(stderr, "ERROR: Unable to open %s\n", outputFileName);
+	//Comprobamos que el numero de pruebas es positivo
+	if (nPruebas < 1) {
+		printf("El numero de pruebas debe ser positivo.\n");
+		return -1;
+	}
+
+	if (salida) {
+		if ((fsalida = fopen(ficherosalida, "w")) == NULL) {
+			fprintf(stderr, "ERROR: Unable to open %s\n", ficherosalida);
 			return -1;
 		}
 	} else
-		outputFile = stdout;
+		fsalida = stdout;
 
-	/* AE measurement */
-	measureAE(&statistics, nTests);
-	printAE(outputFile, &statistics);
+	//Calculamos a ver el numer medio de bits que cambia en cada ronda
+	//Al cambiar 1 bit
+	calcularEstadisticas(&dif, nPruebas);
+	imprimirSalida(fsalida, &dif);
 
-	if (outputFile && (outputFile != stdout))
-		fclose(outputFile);
+	if (fsalida && (fsalida != stdout))
+		fclose(fsalida);
 
 	return 0;
 }
 
-int getArgs(int nArgs, char** args, int* nTests, char* outputFileName,
-		int* flagOutput) {
+int getArgs(int nArgs, char** args, int* nPruebas, char* ficherosalida,
+		int* salida) {
 
-	if ((nArgs != 3) && (nArgs != 5))
-		return ERR_N_ARGS;
-
-	if (getEntero(nArgs, args, nTests, "-t", 2) != 1)
-		return ERR_FLAGS;
+	if (getEntero(nArgs, args, nPruebas, "-n", 2) != 1)
+		return -1;
 
 	if (nArgs == 3)
-		*flagOutput = 0;
-	else if (((*flagOutput) = getCadena(nArgs, args, outputFileName, "-o", 2))
-			!= 1)
-		return ERR_FLAGS;
+		*salida = 0;
+	else if (((*salida) = getCadena(nArgs, args, ficherosalida, "-o", 2)) != 1)
+		return -1;
 
 	return 0;
 }
@@ -202,169 +204,185 @@ int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 	return flag;
 }
 
-void measureAE(AE* statistics, int nTests) {
+void calcularEstadisticas(Diferencias* dif, int nPruebas) {
 
-	BloqueDES key, input;
+	BloqueDES clave, input;
 	int i;
-	unsigned long int textBitChangesAcc[NUM_ROUNDS + 1];
-	unsigned long int keyBitChangesAcc[NUM_ROUNDS + 1];
+	unsigned long int bitsCambiadosTexto[NUM_ROUNDS + 1];
+	unsigned long int bitsCambiadosClave[NUM_ROUNDS + 1];
 	short unsigned int*** Sboxes = NULL;
 
 	srand(time(NULL));
 
-	/* Initialises the counters */
+	//Preparamos dos estructuras para ver los cambios que se hacen en cada ronda
 	for (i = 0; i < NUM_ROUNDS + 1; i++) {
-		textBitChangesAcc[i] = 0;
-		keyBitChangesAcc[i] = 0;
+		bitsCambiadosTexto[i] = 0;
+		bitsCambiadosClave[i] = 0;
 	}
 
-	/* Measures text AE and key AE */
-	Sboxes = allocSboxes();
-	for (i = 0; i < nTests; i++) {
-		newClave(&key);
-		newBloque(&input, TAM_BLOQUE);
-		singleTextAE(&input, &key, textBitChangesAcc, Sboxes);
-		singleKeyAE(&input, &key, keyBitChangesAcc, Sboxes);
+	//Hacemos pruebas a ver cuanto cambian la clave y el texto
+	//y lo guardamos en las estructuras que hemos creado
+	Sboxes = guardarMemSboxes();
+	for (i = 0; i < nPruebas; i++) {
+		crearClave(&clave);
+		crearBloque(&input, TAM_BLOQUE);
+		pruebaTextoCambiado(&input, &clave, bitsCambiadosTexto, Sboxes);
+		pruebaClaveCambiada(&input, &clave, bitsCambiadosClave, Sboxes);
 	}
 	freeSboxes(Sboxes);
 
-	/* Computes the average */
+	//Calculamos la media para cada ronda
 	for (i = 0; i < NUM_ROUNDS + 1; i++) {
-		statistics->textBitChanges[i] = (textBitChangesAcc[i]) * (1. / nTests);
-		statistics->keyBitChanges[i] = (keyBitChangesAcc[i]) * (1. / nTests);
+		dif->bitsCambiadosTexto[i] = (bitsCambiadosTexto[i])
+				* (1. / nPruebas);
+		dif->bitsCambiadosClave[i] = (bitsCambiadosClave[i])
+				* (1. / nPruebas);
 	}
 }
 
-void printAE(FILE* outputFile, AE* statistics) {
+void imprimirSalida(FILE* fsalida, Diferencias* dif) {
 
 	int i;
 
-	fprintf(outputFile,
-			"Number of bits that differ after a bit change in the plaintext:\n");
+	fprintf(fsalida,
+			"Numero de bits que cambian tras cambiar un bit del texto:\n");
 	for (i = 0; i < NUM_ROUNDS + 1; i++)
-		fprintf(outputFile, "- Round %d:\t%.2f\n", i,
-				statistics->textBitChanges[i]);
+		fprintf(fsalida, "- Ronda %d:\t%.2f\n", i,
+				dif->bitsCambiadosTexto[i]);
 
-	fprintf(outputFile,
-			"Number of bits that differ after a bit change in the key:\n");
+	fprintf(fsalida,
+			"Numero de bits que cambian tras cambiar un bit de la clave:\n");
 	for (i = 0; i < NUM_ROUNDS + 1; i++)
-		fprintf(outputFile, "- Round %d:\t%.2f\n", i,
-				statistics->keyBitChanges[i]);
+		fprintf(fsalida, "- Round %d:\t%.2f\n", i,
+				dif->bitsCambiadosClave[i]);
 }
 
-void singleTextAE(BloqueDES* input, BloqueDES* key,
-		unsigned long int* bitChangesAcc, short unsigned int*** Sboxes) {
+void pruebaTextoCambiado(BloqueDES* entrada, BloqueDES* clave,
+		unsigned long int* bitsCambiado, short unsigned int*** Sboxes) {
 
-	BloqueDES oldLeft, oldRight, newLeft, newRight;
-	BloqueDES ipBlock;
-	BloqueDES oldKey, newKey, roundKey;
-	BloqueDES input2;
-	BloqueDES oldLeft2, oldRight2, newLeft2, newRight2;
-	BloqueDES ipBlock2;
+	BloqueDES bloqueIzq_pre, bloqueDer_pre, bloqueIzq_post, bloqueDer_post;
+	BloqueDES bloqueTrasIP;
+	BloqueDES clave_pre, clave_post, clave_ronda;
+	BloqueDES entrada2;
+	BloqueDES bloqueIzq2_pre, bloqueDer2_pre, bloqueIzq2_post, bloqueDer2_post;
+	BloqueDES bloqueTrasIP2;
 	int i;
 
-	/* Modifies the input */
-	copiarBloque(&input2, input, TAM_BLOQUE);
-	alterBlock(&input2, TAM_BLOQUE);
-	bitChangesAcc[0] += calculaDiferencias(input, &input2, TAM_BLOQUE);
+	//Vamos a preparar la entrada cambiada
+	copiarBloque(&entrada2, entrada, TAM_BLOQUE);
+	cambioBit(&entrada2, TAM_BLOQUE);
+	bitsCambiado[0] += calculaDiferencias(entrada, &entrada2, TAM_BLOQUE);
 
-	/* Initial permutation */
-	initialPerm(&ipBlock, input);
-	initialPerm(&ipBlock2, &input2);
+	//Aplicamos la permutacion inicial a la entrada y la entrada cambiada
+	permInicial(&bloqueTrasIP, entrada);
+	permInicial(&bloqueTrasIP2, &entrada2);
 
-	/* Splits the block into the two halves */
-	leftSemiBlock(&oldLeft, &ipBlock);
-	rightSemiBlock(&oldRight, &ipBlock);
-	leftSemiBlock(&oldLeft2, &ipBlock2);
-	rightSemiBlock(&oldRight2, &ipBlock2);
+	//Dividimos los dos bloques ne mitades
+	getParteIzquierda(&bloqueIzq_pre, &bloqueTrasIP);
+	getParteDerecha(&bloqueDer_pre, &bloqueTrasIP);
+	getParteIzquierda(&bloqueIzq2_pre, &bloqueTrasIP2);
+	getParteDerecha(&bloqueDer2_pre, &bloqueTrasIP2);
 
-	/* Permutation Choice 1 */
-	permChoice1(&oldKey, key);
+	//PC1
+	aplicarPC1(&clave_pre, clave);
 
-	/* NUM_ROUNDS rounds */
+	//Aplicamos las rondas DES por duplicado
+	for (i = 1; i <= NUM_ROUNDS; i++) {
+		//Aplicamos LCS
+		aplicarLCS(&clave_post, &clave_pre, i, 1);
+		//Aplicamos PC2
+		aplicarPC2(&clave_ronda, &clave_post);
+
+		//Aplicamos DES por duplicado
+		aplicarDES(&bloqueIzq_post, &bloqueDer_post, &bloqueIzq_pre, &bloqueDer_pre, &clave_ronda,
+				i, Sboxes);
+		aplicarDES(&bloqueIzq2_post, &bloqueDer2_post, &bloqueIzq2_pre, &bloqueDer2_pre,
+				&clave_ronda, i, Sboxes);
+
+		//Calculamos diffs
+		bitsCambiado[i] += calculaDiferencias(&bloqueIzq_post, &bloqueIzq2_post,
+		BITS_IN_FEISTEL / 2);
+		bitsCambiado[i] += calculaDiferencias(&bloqueDer_post, &bloqueDer2_post,
+		BITS_IN_FEISTEL / 2);
+
+		//Prepramos los argumentos para la siguiente iteracion
+		copiarBloque(&bloqueIzq_pre, &bloqueIzq_post, BITS_IN_FEISTEL / 2);
+		copiarBloque(&bloqueDer_pre, &bloqueDer_post, BITS_IN_FEISTEL / 2);
+		copiarBloque(&bloqueIzq2_pre, &bloqueIzq2_post, BITS_IN_FEISTEL / 2);
+		copiarBloque(&bloqueDer2_pre, &bloqueDer2_post, BITS_IN_FEISTEL / 2);
+		copiarBloque(&clave_pre, &clave_post, BITS_IN_PC1);
+	}
+}
+
+void pruebaClaveCambiada(BloqueDES* entrada, BloqueDES* clave,
+		unsigned long int* bitsCambiado, short unsigned int*** Sboxes) {
+
+	BloqueDES bloqueIzq_pre, bloqueDer_pre, bloqueIzq_post, bloqueDer_post;
+	BloqueDES bloqueTrasIP;
+	BloqueDES clave_pre, clave_post, clave_ronda;
+	BloqueDES clave2;
+	BloqueDES clave2_pre, clave2_post, clave2_ronda;
+	BloqueDES bloqueIzq2_pre, bloqueDer2_pre, bloqueIzq2_post, bloqueDer2_post;
+	int i;
+
+	//Vamos a preparar la clave cambiada
+	copiarBloque(&clave2, clave, TAM_CLAVE);
+	cambioBit(&clave2, TAM_CLAVE);	//Cambiamos 1 bit
+
+	//Aplicamos la permutacion inicial a la entrada
+	permInicial(&bloqueTrasIP, entrada);
+
+	//Dividimos el bloque en dos mitades. Guardamos estas mitades
+	//por duplicado para usarlos con cada clave
+	getParteIzquierda(&bloqueIzq_pre, &bloqueTrasIP);
+	getParteDerecha(&bloqueDer_pre, &bloqueTrasIP);
+	copiarBloque(&bloqueIzq2_pre, &bloqueIzq_pre, BITS_IN_FEISTEL / 2);
+	copiarBloque(&bloqueDer2_pre, &bloqueDer_pre, BITS_IN_FEISTEL / 2);
+
+	//Aplicamos PC1
+	aplicarPC1(&clave_pre, clave);
+	aplicarPC1(&clave2_pre, &clave2);
+
+	//Aplicamos las rondas DES por duplicado, una vez con la clave correcta
+	//y otra con la clave con el bit cambiado
 	for (i = 1; i <= NUM_ROUNDS; i++) {
 
-		LCS(&newKey, &oldKey, i, ENCRYPT_FLAG);
-		permChoice2(&roundKey, &newKey);
+		//Aplicamos LCS
+		aplicarLCS(&clave_post, &clave_pre, i, 1);
+		aplicarLCS(&clave2_post, &clave2_pre, i, 1);
 
-		singleRoundGeneral(&newLeft, &newRight, &oldLeft, &oldRight, &roundKey,
-				i, Sboxes);
-		singleRoundGeneral(&newLeft2, &newRight2, &oldLeft2, &oldRight2,
-				&roundKey, i, Sboxes);
+		//Aplicamos PC2
+		aplicarPC2(&clave_ronda, &clave_post);
+		aplicarPC2(&clave2_ronda, &clave2_post);
 
-		bitChangesAcc[i] += calculaDiferencias(&newLeft, &newLeft2,
-				BITS_IN_FEISTEL / 2);
-		bitChangesAcc[i] += calculaDiferencias(&newRight, &newRight2,
-				BITS_IN_FEISTEL / 2);
+		//Aplicamos F de DES
+		aplicarDES(&bloqueIzq_post, &bloqueDer_post, &bloqueIzq_pre,
+				&bloqueDer_pre, &clave_ronda, i, Sboxes);
+		aplicarDES(&bloqueIzq2_post, &bloqueDer2_post, &bloqueIzq2_pre, &bloqueDer2_pre,
+				&clave2_ronda, i, Sboxes);
 
-		copiarBloque(&oldLeft, &newLeft, BITS_IN_FEISTEL / 2);
-		copiarBloque(&oldRight, &newRight, BITS_IN_FEISTEL / 2);
-		copiarBloque(&oldLeft2, &newLeft2, BITS_IN_FEISTEL / 2);
-		copiarBloque(&oldRight2, &newRight2, BITS_IN_FEISTEL / 2);
-		copiarBloque(&oldKey, &newKey, BITS_IN_PC1);
+		//Calculamos las diferencias en esta ronda en cada mitad del bloque
+		bitsCambiado[i] += calculaDiferencias(&bloqueIzq_post, &bloqueIzq2_post,
+		BITS_IN_FEISTEL / 2);
+		bitsCambiado[i] += calculaDiferencias(&bloqueDer_post, &bloqueDer2_post,
+		BITS_IN_FEISTEL / 2);
+
+		//Prepramos los datos para otra iteracion
+		copiarBloque(&bloqueIzq_pre, &bloqueIzq_post, BITS_IN_FEISTEL / 2);
+		copiarBloque(&bloqueDer_pre, &bloqueDer_post, BITS_IN_FEISTEL / 2);
+		copiarBloque(&bloqueIzq2_pre, &bloqueIzq2_post, BITS_IN_FEISTEL / 2);
+		copiarBloque(&bloqueDer2_pre, &bloqueDer2_post, BITS_IN_FEISTEL / 2);
+		copiarBloque(&clave_pre, &clave_post, BITS_IN_PC1);
+		copiarBloque(&clave2_ronda, &clave2_post, BITS_IN_PC1);
 	}
 }
 
-void singleKeyAE(BloqueDES* input, BloqueDES* key,
-		unsigned long int* bitChangesAcc, short unsigned int*** Sboxes) {
-
-	BloqueDES oldLeft, oldRight, newLeft, newRight;
-	BloqueDES ipBlock;
-	BloqueDES oldKey, newKey, roundKey;
-	BloqueDES key2;
-	BloqueDES oldKey2, newKey2, roundKey2;
-	BloqueDES oldLeft2, oldRight2, newLeft2, newRight2;
-	int i;
-
-	/* Modifies the key */
-	copiarBloque(&key2, key, TAM_CLAVE);
-	alterBlock(&key2, TAM_CLAVE);
-
-	/* Initial permutation */
-	initialPerm(&ipBlock, input);
-
-	/* Splits the block into the two halves */
-	leftSemiBlock(&oldLeft, &ipBlock);
-	rightSemiBlock(&oldRight, &ipBlock);
-	copiarBloque(&oldLeft2, &oldLeft, BITS_IN_FEISTEL / 2);
-	copiarBloque(&oldRight2, &oldRight, BITS_IN_FEISTEL / 2);
-
-	/* Permutation Choice 1 */
-	permChoice1(&oldKey, key);
-	permChoice1(&oldKey2, &key2);
-
-	/* NUM_ROUNDS rounds */
-	for (i = 1; i <= NUM_ROUNDS; i++) {
-
-		LCS(&newKey, &oldKey, i, ENCRYPT_FLAG);
-		LCS(&newKey2, &oldKey2, i, ENCRYPT_FLAG);
-		permChoice2(&roundKey, &newKey);
-		permChoice2(&roundKey2, &newKey2);
-
-		singleRoundGeneral(&newLeft, &newRight, &oldLeft, &oldRight, &roundKey,
-				i, Sboxes);
-		singleRoundGeneral(&newLeft2, &newRight2, &oldLeft2, &oldRight2,
-				&roundKey2, i, Sboxes);
-
-		bitChangesAcc[i] += calculaDiferencias(&newLeft, &newLeft2,
-				BITS_IN_FEISTEL / 2);
-		bitChangesAcc[i] += calculaDiferencias(&newRight, &newRight2,
-				BITS_IN_FEISTEL / 2);
-
-		copiarBloque(&oldLeft, &newLeft, BITS_IN_FEISTEL / 2);
-		copiarBloque(&oldRight, &newRight, BITS_IN_FEISTEL / 2);
-		copiarBloque(&oldLeft2, &newLeft2, BITS_IN_FEISTEL / 2);
-		copiarBloque(&oldRight2, &newRight2, BITS_IN_FEISTEL / 2);
-		copiarBloque(&oldKey, &newKey, BITS_IN_PC1);
-		copiarBloque(&oldKey2, &newKey2, BITS_IN_PC1);
-	}
-}
-
-void newClave(BloqueDES* clave) {
+void crearClave(BloqueDES* clave) {
 
 	int byte, bit;
 	int acc;
 
+	//La clave es de 64 bits. Recordamos que no usamos la posicion [0] de un bloque
 	for (byte = 0; byte < (TAM_CLAVE / 8); byte++) {
 		acc = 0;
 		for (bit = 0; bit < 7; bit++)
@@ -373,7 +391,7 @@ void newClave(BloqueDES* clave) {
 	}
 }
 
-void newBloque(BloqueDES* b, int tamBloque) {
+void crearBloque(BloqueDES* b, int tamBloque) {
 
 	int i;
 
@@ -389,7 +407,7 @@ void copiarBloque(BloqueDES* resultado, BloqueDES* entrada, int length) {
 		resultado->bloque[i] = entrada->bloque[i];
 }
 
-void alterBlock(BloqueDES* b, int tamBloque) {
+void cambioBit(BloqueDES* b, int tamBloque) {
 
 	int i = naleatorio(1, tamBloque);
 
@@ -411,62 +429,64 @@ int calculaDiferencias(BloqueDES* b1, BloqueDES* b2, int tamBloque) {
 	return n;
 }
 
-void initialPerm(BloqueDES* new, BloqueDES* old) {
-	selectDES(new, old, IP, BITS_IN_IP);
+void permInicial(BloqueDES* resultado, BloqueDES* entrada) {
+	//Hacemos la permutacion con los datos de la permutacion Inicial
+	aplicarMatriz(resultado, entrada, IP, BITS_IN_IP);
 }
 
-void leftSemiBlock(BloqueDES* semiBlock, BloqueDES* fullBlock) {
+void getParteIzquierda(BloqueDES* izq, BloqueDES* entrada) {
 
 	int i;
 
 	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++)
-		semiBlock->bloque[i] = fullBlock->bloque[i];
+		izq->bloque[i] = entrada->bloque[i];
 }
 
-void rightSemiBlock(BloqueDES* semiBlock, BloqueDES* fullBlock) {
+void getParteDerecha(BloqueDES* der, BloqueDES* entrada) {
 
 	int i;
 
 	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++)
-		semiBlock->bloque[i] = fullBlock->bloque[i + BITS_IN_FEISTEL / 2];
+		der->bloque[i] = entrada->bloque[i + BITS_IN_FEISTEL / 2];
 }
 
-void permChoice1(BloqueDES* new, BloqueDES* old) {
-	selectDES(new, old, PC1, BITS_IN_PC1);
+void aplicarPC1(BloqueDES* new, BloqueDES* old) {
+	aplicarMatriz(new, old, PC1, BITS_IN_PC1);
 }
 
-void LCS(BloqueDES* new, BloqueDES* old, int nRound, int flag) {
+void aplicarLCS(BloqueDES* resultado, BloqueDES* entrada, int nRonda, int modo) {
 
-	if (flag == ENCRYPT_FLAG)
-		shiftLeftDES(new, old, ROUND_SHIFTS[nRound - 1]);
-	else if (flag == DECRYPT_FLAG)
-		shiftRightDES(new, old, ROUND_SHIFTS_DEC[nRound - 1]);
+	if (modo == 1)
+		desplazamientoIzq(resultado, entrada, ROUND_SHIFTS[nRonda - 1]);
+	else if (modo == 2)
+		desplazamientoDer(resultado, entrada, ROUND_SHIFTS_DEC[nRonda - 1]);
 }
 
-void permChoice2(BloqueDES* new, BloqueDES* old) {
-	selectDES(new, old, PC2, BITS_IN_PC2);
+void aplicarPC2(BloqueDES* new, BloqueDES* old) {
+	aplicarMatriz(new, old, PC2, BITS_IN_PC2);
 }
 
-void singleRoundGeneral(BloqueDES* newLeft, BloqueDES* newRight,
-		BloqueDES* oldLeft, BloqueDES* oldRight, BloqueDES* key, int nRound,
+void aplicarDES(BloqueDES* resIzq, BloqueDES* resDer,
+		BloqueDES* entradaIzq, BloqueDES* entradaDer, BloqueDES* key, int nRonda,
 		short unsigned int*** Sbox) {
-	BloqueDES eBlock, xBlock, sBlock, pBlock;
 
-	/* F function */
-	expansion(&eBlock, oldRight);
-	xorDES(&xBlock, &eBlock, key, BITS_IN_E);
-	SBoxGeneral(&sBlock, &xBlock, Sbox);
-	permutation(&pBlock, &sBlock);
+	BloqueDES bloque1, bloque2, bloque3, bloque4;
 
-	/* L(i) = R(i-1) */
-	copiarBloque(newLeft, oldRight, BITS_IN_FEISTEL / 2);
+	//F de DES sobre el semibloque derecho
+	expansion(&bloque1, entradaDer);
+	xorDES(&bloque2, &bloque1, key, BITS_IN_E);
+	SBoxGeneral(&bloque3, &bloque2, Sbox);
+	aplicarP(&bloque4, &bloque3);
 
-	/* R(i) = L(i-1) xor F(R(i-1),k(i)) */
-	xorDES(newRight, oldLeft, &pBlock, BITS_IN_P);
+	// L(i) = R(i - 1)
+	copiarBloque(resIzq, entradaDer, BITS_IN_FEISTEL / 2);
+
+	// R(i) = L(i - 1) XOR F(R(i - 1), k(i))
+	xorDES(resDer, entradaIzq, &bloque4, BITS_IN_P);
 }
 
-void selectDES(BloqueDES* resultado, BloqueDES* entrada, const unsigned short* indices,
-		int length) {
+void aplicarMatriz(BloqueDES* resultado, BloqueDES* entrada,
+		const unsigned short* indices, int length) {
 
 	int i;
 
@@ -474,32 +494,33 @@ void selectDES(BloqueDES* resultado, BloqueDES* entrada, const unsigned short* i
 		resultado->bloque[i] = entrada->bloque[indices[i - 1]];
 }
 
-void shiftLeftDES(BloqueDES* resultado, BloqueDES* entrada, int shift) {
+void desplazamientoIzq(BloqueDES* resultado, BloqueDES* entrada, int shift) {
 
 	int i;
 
-	for (i = 0; i < BITS_IN_HALFBLOCK; i++)
-		resultado->bloque[i + 1] = entrada->bloque[((i + shift) % (BITS_IN_HALFBLOCK)) + 1];
-	for (i = 0; i < BITS_IN_HALFBLOCK; i++)
-		resultado->bloque[i + BITS_IN_HALFBLOCK + 1] = entrada->bloque[((i + shift)
-				% (BITS_IN_HALFBLOCK)) + BITS_IN_HALFBLOCK + 1];
+	for (i = 0; i < BITS_IN_KEY/2; i++)
+		resultado->bloque[i + 1] = entrada->bloque[((i + shift)
+				% (BITS_IN_KEY/2)) + 1];
+	for (i = 0; i < BITS_IN_KEY/2; i++)
+		resultado->bloque[i + BITS_IN_KEY/2 + 1] = entrada->bloque[((i
+				+ shift) % (BITS_IN_KEY/2)) + BITS_IN_KEY/2 + 1];
 }
 
-void shiftRightDES(BloqueDES* resultado, BloqueDES* entrada, int shift) {
+void desplazamientoDer(BloqueDES* resultado, BloqueDES* entrada, int shift) {
 
 	int i;
 
-	for (i = 0; i < BITS_IN_HALFBLOCK; i++)
-		resultado->bloque[i + 1] = entrada->bloque[((i - shift + BITS_IN_HALFBLOCK)
-				% (BITS_IN_HALFBLOCK)) + 1];
-	for (i = 0; i < BITS_IN_HALFBLOCK; i++)
-		resultado->bloque[i + BITS_IN_HALFBLOCK + 1] = entrada->bloque[((i - shift
-				+ BITS_IN_HALFBLOCK) % (BITS_IN_HALFBLOCK)) + BITS_IN_HALFBLOCK
-				+ 1];
+	for (i = 0; i < BITS_IN_KEY/2; i++)
+		resultado->bloque[i + 1] = entrada->bloque[((i - shift
+				+ BITS_IN_KEY/2) % (BITS_IN_KEY/2)) + 1];
+	for (i = 0; i < BITS_IN_KEY/2; i++)
+		resultado->bloque[i + BITS_IN_KEY/2 + 1] = entrada->bloque[((i
+				- shift + BITS_IN_KEY/2) % (BITS_IN_KEY/2))
+				+ BITS_IN_KEY/2 + 1];
 }
 
-void expansion(BloqueDES* new, BloqueDES* old) {
-	selectDES(new, old, E, BITS_IN_E);
+void expansion(BloqueDES* resultado, BloqueDES* entrada) {
+	aplicarMatriz(resultado, entrada, E, BITS_IN_E);
 }
 
 void xorDES(BloqueDES* resultado, BloqueDES* a, BloqueDES* b, int length) {
@@ -510,26 +531,29 @@ void xorDES(BloqueDES* resultado, BloqueDES* a, BloqueDES* b, int length) {
 		resultado->bloque[i] = (a->bloque[i] != b->bloque[i]);
 }
 
-void SBoxGeneral(BloqueDES* resultado, BloqueDES* entrada, short unsigned int*** Sbox) {
+void SBoxGeneral(BloqueDES* resultado, BloqueDES* entrada,
+		short unsigned int*** Sbox) {
 
-	int i, row, col;
-	int value;
+	int i, fila, col;
+	int valor;
 
 	for (i = 0; i < NUM_S_BOXES; i++) {
-		row = 2 * entrada->bloque[1 + 6 * i] + entrada->bloque[1 + 6 * i + 5];
-		col = 8 * entrada->bloque[1 + 6 * i + 1] + 4 * entrada->bloque[1 + 6 * i + 2]
-				+ 2 * entrada->bloque[1 + 6 * i + 3] + entrada->bloque[1 + 6 * i + 4];
+		fila = 2 * entrada->bloque[1 + 6 * i] + entrada->bloque[1 + 6 * i + 5];
+		col = 8 * entrada->bloque[1 + 6 * i + 1]
+				+ 4 * entrada->bloque[1 + 6 * i + 2]
+				+ 2 * entrada->bloque[1 + 6 * i + 3]
+				+ entrada->bloque[1 + 6 * i + 4];
 
-		value = Sbox[i][row][col];
-		resultado->bloque[1 + i * 4 + 3] = value % 2;
-		resultado->bloque[1 + i * 4 + 2] = (value / 2) % 2;
-		resultado->bloque[1 + i * 4 + 1] = (value / 4) % 2;
-		resultado->bloque[1 + i * 4] = (value / 8) % 2;
+		valor = Sbox[i][fila][col];
+		resultado->bloque[1 + i * 4 + 3] = valor % 2;
+		resultado->bloque[1 + i * 4 + 2] = (valor / 2) % 2;
+		resultado->bloque[1 + i * 4 + 1] = (valor / 4) % 2;
+		resultado->bloque[1 + i * 4] = (valor / 8) % 2;
 	}
 }
 
-void permutation(BloqueDES* new, BloqueDES* old) {
-	selectDES(new, old, P, BITS_IN_P);
+void aplicarP(BloqueDES* resultado, BloqueDES* entrada) {
+	aplicarMatriz(resultado, entrada, P, BITS_IN_P);
 }
 
 int naleatorio(int a, int b) {
@@ -540,31 +564,25 @@ int naleatorio(int a, int b) {
 	return a + (rand() % (b - a + 1));
 }
 
-unsigned short*** allocSboxes() {
+unsigned short*** guardarMemSboxes() {
 
-#ifdef __NEWDES__
-	return getNewSboxes();
-#else
-#ifdef __RANDOMDES__
-	return getNewRandomSboxes();
-#else
 	unsigned short*** Sboxes;
 	int i, j;
-
+	//Reservamos memoria para guardas las cajas S
+	//Recordamos que cada caja es una matriz por lo que necesitaremos
+	//un array del tipo SBOXES[i][j][k], siendo SBOX = SBOXES[i]
 	Sboxes = (unsigned short***) malloc(NUM_S_BOXES * sizeof(unsigned short**));
 	for (i = 0; i < NUM_S_BOXES; i++) {
 		Sboxes[i] = (unsigned short**) malloc(
-				ROWS_PER_SBOX * sizeof(unsigned short*));
+		ROWS_PER_SBOX * sizeof(unsigned short*));	//Filas
 		for (j = 0; j < ROWS_PER_SBOX; j++)
 			Sboxes[i][j] = (unsigned short*) malloc(
-					COLUMNS_PER_SBOX * sizeof(unsigned short));
+			COLUMNS_PER_SBOX * sizeof(unsigned short));	//Columnas
 	}
 
 	getSboxes(Sboxes);
 
 	return Sboxes;
-#endif
-#endif
 }
 
 void freeSboxes(unsigned short*** Sboxes) {
@@ -589,16 +607,5 @@ void getSboxes(unsigned short*** Sboxes) {
 		for (r = 0; r < ROWS_PER_SBOX; r++)
 			for (c = 0; c < COLUMNS_PER_SBOX; c++)
 				Sboxes[box][r][c] = S_BOXES[box][r][c];
-}
-
-void printUsage(char* message) {
-
-	if (message)
-		fprintf(stderr, "%s", message);
-
-	fprintf(stderr, "Syntax: ./desAE {-t nTests} [-o outputFile]\n");
-	fprintf(stderr,
-			"- nTests:\tNumber of tests to perform in order to measure the Avalanche Effect\n");
-	fprintf(stderr, "- outputFile:\tOutput file (default: stdout)\n");
 }
 
