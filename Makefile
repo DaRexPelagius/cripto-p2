@@ -15,6 +15,9 @@ desECB: desECB.c desECB.h
 	
 NL_DES: NL_DES.c NL_DES.h 
 	gcc NL_DES.c -o NL_DES -Wall -O2 -lm -g	
+		
+EfectoAvalanchaDES: EfectoAvalanchaDES.c EfectoAvalanchaDES.h 
+	gcc EfectoAvalanchaDES.c -o EfectoAvalanchaDES -Wall -O2 -lm -g	
 	
 clean:
 	rm *.o *~ $(EXE)

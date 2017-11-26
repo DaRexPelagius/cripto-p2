@@ -2,6 +2,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <math.h>
+#include <time.h>
+#include <ctype.h>
 
 
 
@@ -14,8 +17,8 @@ CONSTANTS
 
 #define ENCRYPT_FLAG 1
 #define DECRYPT_FLAG 2
-#define DES_BLOCK_SIZE 64
-#define DES_KEY_SIZE 64
+#define TAM_BLOQUE 64
+#define TAM_CLAVE 64
 #define NUM_ROUNDS 16
 #define BITS_IN_FEISTEL 64
 #define BITS_IN_KEY 56
@@ -46,8 +49,8 @@ typedef struct {
 
 /* Block in DES algorithm */
 typedef struct {
-	uint8_t block[DES_BLOCK_SIZE+1];	/* block[0] is never used */
-} DESblock;
+	uint8_t bloque[TAM_BLOQUE + 1];	/* block[0] is never used */
+} BloqueDES;
 
 
 
@@ -57,32 +60,33 @@ int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud);
 int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud);
 void measureAE(AE* statistics, int nTests);
 void printAE(FILE* outputFile, AE* statistics);
-void singleTextAE(DESblock* input, DESblock* key, unsigned long int* bitChangesAcc, short unsigned int*** Sboxes);
-void singleKeyAE(DESblock* input, DESblock* key, unsigned long int* bitChangesAcc, short unsigned int*** Sboxes);
-void newClave(Bloque* clave);
-void newBloque(DESblock* b, int tamBloque);
-void copiarBloque(DESblock* new, DESblock* old, int length);
-void alterBlock(DESblock* b, int tamBloque);
-int calculaDiferencias(DESblock* b1, DESblock* b2, int tamBloque);
-void initialPerm(DESblock* new, DESblock* old);
-void leftSemiBlock(DESblock* semiBlock, DESblock* fullBlock);
-void rightSemiBlock(DESblock* semiBlock, DESblock* fullBlock);
-void permChoice1(DESblock* new, DESblock* old);
-void LCS(DESblock* new, DESblock* old, int nRound, int flag);
-void permChoice2(DESblock* new, DESblock* old);
-void singleRoundGeneral(DESblock* newLeft, DESblock* newRight, DESblock* oldLeft, DESblock* oldRight, DESblock* key, int nRound, short unsigned int*** Sbox);
-void selectDES(DESblock* new, DESblock* old, const unsigned short* indices, int length);
-void shiftLeftDES(DESblock* new, DESblock* old, int shift);
-void shiftRightDES(DESblock* new, DESblock* old, int shift);
-void expansion(DESblock* new, DESblock* old);
-void xorDES(DESblock* new, DESblock* old1, DESblock* old2, int length);
-void SBoxGeneral(DESblock* new, DESblock* old, short unsigned int*** Sbox);
-void permutation(DESblock* new, DESblock* old);
+void singleTextAE(BloqueDES* input, BloqueDES* key, unsigned long int* bitChangesAcc, short unsigned int*** Sboxes);
+void singleKeyAE(BloqueDES* input, BloqueDES* key, unsigned long int* bitChangesAcc, short unsigned int*** Sboxes);
+void newClave(BloqueDES* clave);
+void newBloque(BloqueDES* b, int tamBloque);
+void copiarBloque(BloqueDES* new, BloqueDES* old, int length);
+void alterBlock(BloqueDES* b, int tamBloque);
+int calculaDiferencias(BloqueDES* b1, BloqueDES* b2, int tamBloque);
+void initialPerm(BloqueDES* new, BloqueDES* old);
+void leftSemiBlock(BloqueDES* semiBlock, BloqueDES* fullBlock);
+void rightSemiBlock(BloqueDES* semiBlock, BloqueDES* fullBlock);
+void permChoice1(BloqueDES* new, BloqueDES* old);
+void LCS(BloqueDES* new, BloqueDES* old, int nRound, int flag);
+void permChoice2(BloqueDES* new, BloqueDES* old);
+void singleRoundGeneral(BloqueDES* newLeft, BloqueDES* newRight, BloqueDES* oldLeft, BloqueDES* oldRight, BloqueDES* key, int nRound, short unsigned int*** Sbox);
+void selectDES(BloqueDES* new, BloqueDES* old, const unsigned short* indices, int length);
+void shiftLeftDES(BloqueDES* new, BloqueDES* old, int shift);
+void shiftRightDES(BloqueDES* new, BloqueDES* old, int shift);
+void expansion(BloqueDES* new, BloqueDES* old);
+void xorDES(BloqueDES* new, BloqueDES* old1, BloqueDES* old2, int length);
+void SBoxGeneral(BloqueDES* new, BloqueDES* old, short unsigned int*** Sbox);
+void permutation(BloqueDES* new, BloqueDES* old);
 int naleatorio(int a, int b);
 unsigned short*** allocSboxes();
 void freeSboxes(unsigned short*** Sboxes);
 void printUsage(char* message);
 void freeSboxes(unsigned short*** Sboxes);
+void getSboxes(unsigned short*** Sboxes);
 
 
 
