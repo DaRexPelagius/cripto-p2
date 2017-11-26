@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
 	} else
 		fsalida = stdout;
 
-	//Calculamos a ver el numer medio de bits que cambia en cada ronda
+	//Calculamos a ver el numero medio de bits que cambia en cada ronda
 	//Al cambiar 1 bit
 	calcularEstadisticas(&dif, nPruebas);
 	imprimirSalida(fsalida, &dif);
@@ -124,7 +124,18 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
-
+/*--------------------------------------------------------------------------
+ Obtiene los argumentos
+ - Entrada:
+ 	* Número de argumentos
+ 	* Array de argumentos
+ 	* Numero de pruebas a realizar
+ 	* Puntero al fichero de salida
+ 	* Salida
+ - Salida:
+ 	* -1 si ocurre algun error
+ 	* 0 si va bien
+ --------------------------------------------------------------------------*/
 int getArgs(int nArgs, char** args, int* nPruebas, char* ficherosalida,
 		int* salida) {
 
@@ -142,14 +153,14 @@ int getArgs(int nArgs, char** args, int* nPruebas, char* ficherosalida,
 /*--------------------------------------------------------------------------
  Obtiene un entero
  - Entrada:
- * Número de argumentos
- * Array de argumentos
- * Puntero al entero
- * Puntero al modo
- * Longitud de la cadena
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Puntero al entero
+	 * Puntero al modo
+	 * Longitud de la cadena
  - Salida:
- * -1 si ocurre algun error
- * 1 si va bien
+	 * -1 si ocurre algun error
+	 * 1 si va bien
  --------------------------------------------------------------------------*/
 int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud) {
 
@@ -176,14 +187,14 @@ int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud) {
 /*--------------------------------------------------------------------------
  Obtiene una cadena
  - Entrada:
- * Número de argumentos
- * Array de argumentos
- * Puntero a la cadena
- * Puntero al modo
- * Longitud de la cadena
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Puntero a la cadena
+	 * Puntero al modo
+	 * Longitud de la cadena
  - Salida:
- * -1 si ocurre algun error
- * 1 si va bien
+	 * -1 si ocurre algun error
+	 * 1 si va bien
  --------------------------------------------------------------------------*/
 int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 
@@ -203,7 +214,13 @@ int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 
 	return flag;
 }
-
+/*--------------------------------------------------------------------------
+ Calcula las estadisticas necesarias (porcentaje de coincidencias, esperanza y 
+ desviacion tipica) las cuales utilizaremos para mostrar la no linealidad de DES
+ - Entrada:
+	 * Estructura donde guardamos los resultados
+	 * Número de pruebas a realizar
+ --------------------------------------------------------------------------*/
 void calcularEstadisticas(Diferencias* dif, int nPruebas) {
 
 	BloqueDES clave, input;
@@ -239,7 +256,12 @@ void calcularEstadisticas(Diferencias* dif, int nPruebas) {
 				* (1. / nPruebas);
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Imprime la salida
+ - Entrada:
+	 * Fichero donde imprimirlo
+	 * Resultados a imprimir
+ --------------------------------------------------------------------------*/
 void imprimirSalida(FILE* fsalida, Diferencias* dif) {
 
 	int i;
@@ -256,7 +278,15 @@ void imprimirSalida(FILE* fsalida, Diferencias* dif) {
 		fprintf(fsalida, "- Round %d:\t%.2f\n", i,
 				dif->bitsCambiadosClave[i]);
 }
-
+/*--------------------------------------------------------------------------
+ Calcula los bits diferentes al cambiar un texto, realizando el proceso de 
+ DES necesario
+ - Entrada:
+	 * Bloque entrada
+	 * Clave
+	 * Bits cambiados
+	 * S-boxes
+ --------------------------------------------------------------------------*/
 void pruebaTextoCambiado(BloqueDES* entrada, BloqueDES* clave,
 		unsigned long int* bitsCambiado, short unsigned int*** Sboxes) {
 
@@ -313,7 +343,15 @@ void pruebaTextoCambiado(BloqueDES* entrada, BloqueDES* clave,
 		copiarBloque(&clave_pre, &clave_post, BITS_IN_PC1);
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Calcula los bits diferentes al cambiar la clave, realizando el proceso de 
+ DES necesario
+ - Entrada:
+	 * Bloque entrada
+	 * Clave
+	 * Bits cambiados
+	 * S-boxes
+ --------------------------------------------------------------------------*/
 void pruebaClaveCambiada(BloqueDES* entrada, BloqueDES* clave,
 		unsigned long int* bitsCambiado, short unsigned int*** Sboxes) {
 
@@ -376,7 +414,11 @@ void pruebaClaveCambiada(BloqueDES* entrada, BloqueDES* clave,
 		copiarBloque(&clave2_ronda, &clave2_post, BITS_IN_PC1);
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Crea la clave
+ - Entrada:
+	 * Clave a crear
+ --------------------------------------------------------------------------*/
 void crearClave(BloqueDES* clave) {
 
 	int byte, bit;
@@ -390,7 +432,12 @@ void crearClave(BloqueDES* clave) {
 		clave->bloque[8 * byte + 7 + 1] = (acc % 2 == 0);
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Crea un bloque
+ - Entrada:
+	 * Bloque a crear
+	 * Tamaño del bloque
+ --------------------------------------------------------------------------*/
 void crearBloque(BloqueDES* b, int tamBloque) {
 
 	int i;
@@ -398,7 +445,13 @@ void crearBloque(BloqueDES* b, int tamBloque) {
 	for (i = 1; i <= tamBloque; i++)
 		b->bloque[i] = naleatorio(0, 1);
 }
-
+/*--------------------------------------------------------------------------
+ Copia un bloque
+ - Entrada:
+	 * Bloque a copiar
+	 * Bloque destino
+	 * Tamaño del bloque
+ --------------------------------------------------------------------------*/
 void copiarBloque(BloqueDES* resultado, BloqueDES* entrada, int length) {
 
 	int i;
@@ -406,7 +459,12 @@ void copiarBloque(BloqueDES* resultado, BloqueDES* entrada, int length) {
 	for (i = 1; i <= length; i++)
 		resultado->bloque[i] = entrada->bloque[i];
 }
-
+/*--------------------------------------------------------------------------
+ Cambia un bit aleatoriamente
+ - Entrada:
+	 * Bloque b
+	 * Tamaño del bloque
+ --------------------------------------------------------------------------*/
 void cambioBit(BloqueDES* b, int tamBloque) {
 
 	int i = naleatorio(1, tamBloque);
@@ -416,7 +474,13 @@ void cambioBit(BloqueDES* b, int tamBloque) {
 	else
 		b->bloque[i] = 0;
 }
-
+/*--------------------------------------------------------------------------
+ Calcula las diferencias entre dos bloques
+ - Entrada:
+	 * Bloque b1
+	 * Bloque b2
+	 * Tamaño del bloque
+ --------------------------------------------------------------------------*/
 int calculaDiferencias(BloqueDES* b1, BloqueDES* b2, int tamBloque) {
 
 	int i;
@@ -428,12 +492,23 @@ int calculaDiferencias(BloqueDES* b1, BloqueDES* b2, int tamBloque) {
 
 	return n;
 }
-
+/*--------------------------------------------------------------------------
+ Realiza la permutacion inicial del DES (IP)
+ - Entrada:
+	 * Bloque entrada
+	 * Bloque resultado de la permutacion
+ --------------------------------------------------------------------------*/
 void permInicial(BloqueDES* resultado, BloqueDES* entrada) {
 	//Hacemos la permutacion con los datos de la permutacion Inicial
 	aplicarMatriz(resultado, entrada, IP, BITS_IN_IP);
 }
 
+/*--------------------------------------------------------------------------
+ Se queda con la parte izquierda de un bloque
+ - Entrada:
+	 * Bloque con la parte izquierda
+	 * Entrada
+ --------------------------------------------------------------------------*/
 void getParteIzquierda(BloqueDES* izq, BloqueDES* entrada) {
 
 	int i;
@@ -441,7 +516,12 @@ void getParteIzquierda(BloqueDES* izq, BloqueDES* entrada) {
 	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++)
 		izq->bloque[i] = entrada->bloque[i];
 }
-
+/*--------------------------------------------------------------------------
+ Se queda con la parte derecha de un bloque
+ - Entrada:
+	 * Bloque con la parte derecha
+	 * Entrada
+ --------------------------------------------------------------------------*/
 void getParteDerecha(BloqueDES* der, BloqueDES* entrada) {
 
 	int i;
@@ -449,11 +529,23 @@ void getParteDerecha(BloqueDES* der, BloqueDES* entrada) {
 	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++)
 		der->bloque[i] = entrada->bloque[i + BITS_IN_FEISTEL / 2];
 }
-
-void aplicarPC1(BloqueDES* new, BloqueDES* old) {
-	aplicarMatriz(new, old, PC1, BITS_IN_PC1);
+/*--------------------------------------------------------------------------
+ Aplica la PC1 del DES
+ - Entrada:
+	 * Bloque entrada
+	 * Bloque resultado
+ --------------------------------------------------------------------------*/
+void aplicarPC1(BloqueDES* resultado, BloqueDES* entrada) {
+	aplicarMatriz(resultado, entrada, PC1, BITS_IN_PC1);
 }
-
+/*--------------------------------------------------------------------------
+ Aplica el LCS del DES
+ - Entrada:
+	 * Bloque entrada
+	 * Bloque resultado
+	 * Numero de la ronda
+	 * Modo
+ --------------------------------------------------------------------------*/
 void aplicarLCS(BloqueDES* resultado, BloqueDES* entrada, int nRonda, int modo) {
 
 	if (modo == 1)
@@ -461,11 +553,28 @@ void aplicarLCS(BloqueDES* resultado, BloqueDES* entrada, int nRonda, int modo) 
 	else if (modo == 2)
 		desplazamientoDer(resultado, entrada, ROUND_SHIFTS_DEC[nRonda - 1]);
 }
-
-void aplicarPC2(BloqueDES* new, BloqueDES* old) {
-	aplicarMatriz(new, old, PC2, BITS_IN_PC2);
+/*--------------------------------------------------------------------------
+ Aplica la PC2 del DES
+ - Entrada:
+	 * Bloque entrada
+	 * Bloque resultado
+ --------------------------------------------------------------------------*/
+void aplicarPC2(BloqueDES* resultado, BloqueDES* entrada) {
+	aplicarMatriz(resultado, entrada, PC2, BITS_IN_PC2);
 }
-
+/*--------------------------------------------------------------------------
+ Aplica la funcion F del des y la posterior asignacion:
+	-L(i) = R(i - 1)
+	-R(i) = L(i - 1) XOR F(R(i - 1), k(i))
+ - Entrada:
+	 * Bloque entrada izquierda
+	 * Bloque entrada derecha
+	 * Bloque salida izquierda
+	 * Bloque salida derecha
+	 * Clave
+	 * Sbox
+	 * Numero de ronda
+ --------------------------------------------------------------------------*/
 void aplicarDES(BloqueDES* resIzq, BloqueDES* resDer,
 		BloqueDES* entradaIzq, BloqueDES* entradaDer, BloqueDES* key, int nRonda,
 		short unsigned int*** Sbox) {
@@ -484,7 +593,14 @@ void aplicarDES(BloqueDES* resIzq, BloqueDES* resDer,
 	// R(i) = L(i - 1) XOR F(R(i - 1), k(i))
 	xorDES(resDer, entradaIzq, &bloque4, BITS_IN_P);
 }
-
+/*--------------------------------------------------------------------------
+ Aplica la matriz
+ - Entrada:
+	 * Bloque entrada 
+	 * Bloque resultado
+	 * Indices
+	 * Longitud
+ --------------------------------------------------------------------------*/
 void aplicarMatriz(BloqueDES* resultado, BloqueDES* entrada,
 		const unsigned short* indices, int length) {
 
@@ -493,7 +609,13 @@ void aplicarMatriz(BloqueDES* resultado, BloqueDES* entrada,
 	for (i = 1; i <= length; i++)
 		resultado->bloque[i] = entrada->bloque[indices[i - 1]];
 }
-
+/*--------------------------------------------------------------------------
+ Realiza un desplazamiento a la izquierda
+ - Entrada:
+	 * Bloque entrada 
+	 * Bloque resultado
+	 * Deplazamiento
+ --------------------------------------------------------------------------*/
 void desplazamientoIzq(BloqueDES* resultado, BloqueDES* entrada, int shift) {
 
 	int i;
@@ -505,7 +627,13 @@ void desplazamientoIzq(BloqueDES* resultado, BloqueDES* entrada, int shift) {
 		resultado->bloque[i + BITS_IN_KEY/2 + 1] = entrada->bloque[((i
 				+ shift) % (BITS_IN_KEY/2)) + BITS_IN_KEY/2 + 1];
 }
-
+/*--------------------------------------------------------------------------
+ Realiza un desplazamiento a la derecha
+ - Entrada:
+	 * Bloque entrada 
+	 * Bloque resultado
+	 * Deplazamiento
+ --------------------------------------------------------------------------*/
 void desplazamientoDer(BloqueDES* resultado, BloqueDES* entrada, int shift) {
 
 	int i;
@@ -518,11 +646,24 @@ void desplazamientoDer(BloqueDES* resultado, BloqueDES* entrada, int shift) {
 				- shift + BITS_IN_KEY/2) % (BITS_IN_KEY/2))
 				+ BITS_IN_KEY/2 + 1];
 }
-
+/*--------------------------------------------------------------------------
+ Realiza la expansion de la funcion F del DES (E)
+ - Entrada:
+	 * Bloque entrada 
+	 * Bloque resultado
+ --------------------------------------------------------------------------*/
 void expansion(BloqueDES* resultado, BloqueDES* entrada) {
 	aplicarMatriz(resultado, entrada, E, BITS_IN_E);
 }
 
+/*--------------------------------------------------------------------------
+ Realiza el XOR de a y b
+ - Entrada:
+	 * Bloque a 
+	 * Bloque b
+	 * Bloque resultado
+	 * Longitud
+ --------------------------------------------------------------------------*/
 void xorDES(BloqueDES* resultado, BloqueDES* a, BloqueDES* b, int length) {
 
 	int i;
@@ -530,7 +671,13 @@ void xorDES(BloqueDES* resultado, BloqueDES* a, BloqueDES* b, int length) {
 	for (i = 1; i <= length; i++)
 		resultado->bloque[i] = (a->bloque[i] != b->bloque[i]);
 }
-
+/*--------------------------------------------------------------------------
+ S-box del DES
+ - Entrada:
+	 * Bloque de entrada
+	 * Bloque resultados
+	 * S-box
+ --------------------------------------------------------------------------*/
 void SBoxGeneral(BloqueDES* resultado, BloqueDES* entrada,
 		short unsigned int*** Sbox) {
 
@@ -551,11 +698,22 @@ void SBoxGeneral(BloqueDES* resultado, BloqueDES* entrada,
 		resultado->bloque[1 + i * 4] = (valor / 8) % 2;
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Realiza la permutacion P del DES
+ - Entrada:
+	 * Bloque resultado
+	 * Bloque entrada
+ --------------------------------------------------------------------------*/
 void aplicarP(BloqueDES* resultado, BloqueDES* entrada) {
 	aplicarMatriz(resultado, entrada, P, BITS_IN_P);
 }
-
+/*--------------------------------------------------------------------------
+ Generamos un numero aleatorio entre a y b
+ - Entrada:
+	 * Numeros a y b, extremos del intervalo
+ - Salida:
+	 * Numero generado
+ --------------------------------------------------------------------------*/
 int naleatorio(int a, int b) {
 
 	if (a >= b)
@@ -563,7 +721,11 @@ int naleatorio(int a, int b) {
 
 	return a + (rand() % (b - a + 1));
 }
-
+/*--------------------------------------------------------------------------
+ Reserva memoria para guardar las S-boxes
+ - Salida:
+	 * Las S-boxes generadas
+ --------------------------------------------------------------------------*/
 unsigned short*** guardarMemSboxes() {
 
 	unsigned short*** Sboxes;
@@ -584,7 +746,11 @@ unsigned short*** guardarMemSboxes() {
 
 	return Sboxes;
 }
-
+/*--------------------------------------------------------------------------
+ Libera la memoria de las S-boxes
+ - Entrada:
+	 * S-boxes a liberar
+ --------------------------------------------------------------------------*/
 void freeSboxes(unsigned short*** Sboxes) {
 
 	int i, j;
@@ -598,7 +764,11 @@ void freeSboxes(unsigned short*** Sboxes) {
 	free(Sboxes);
 	Sboxes = NULL;
 }
-
+/*--------------------------------------------------------------------------
+ Obtiene las S-boxs
+ - Entrada:
+	 * S-boxes obtenidas
+ --------------------------------------------------------------------------*/
 void getSboxes(unsigned short*** Sboxes) {
 
 	int box, r, c;
