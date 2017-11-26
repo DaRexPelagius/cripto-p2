@@ -105,7 +105,18 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
-
+/*--------------------------------------------------------------------------
+ Obtiene los argumentos
+ - Entrada:
+ 	* Número de argumentos
+ 	* Array de argumentos
+ 	* Numero de pruebas a realizar
+ 	* Puntero al fichero de salida
+ 	* Salida
+ - Salida:
+ 	* -1 si ocurre algun error
+ 	* 0 si va bien
+ --------------------------------------------------------------------------*/
 int getArgs(int nArgs, char** args, int* nPruebas, char* ficherosalida,
 		int* salida) {
 
@@ -123,14 +134,14 @@ int getArgs(int nArgs, char** args, int* nPruebas, char* ficherosalida,
 /*--------------------------------------------------------------------------
  Obtiene un entero
  - Entrada:
- * Número de argumentos
- * Array de argumentos
- * Puntero al entero
- * Puntero al modo
- * Longitud de la cadena
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Puntero al entero
+	 * Puntero al modo
+	 * Longitud de la cadena
  - Salida:
- * -1 si ocurre algun error
- * 1 si va bien
+	 * -1 si ocurre algun error
+	 * 1 si va bien
  --------------------------------------------------------------------------*/
 int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud) {
 
@@ -158,14 +169,14 @@ int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud) {
 /*--------------------------------------------------------------------------
  Obtiene una cadena
  - Entrada:
- * Número de argumentos
- * Array de argumentos
- * Puntero a la cadena
- * Puntero al modo
- * Longitud de la cadena
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Puntero a la cadena
+	 * Puntero al modo
+	 * Longitud de la cadena
  - Salida:
- * -1 si ocurre algun error
- * 1 si va bien
+	 * -1 si ocurre algun error
+	 * 1 si va bien
  --------------------------------------------------------------------------*/
 int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 
@@ -184,7 +195,14 @@ int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 		}
 	return flag;
 }
+/*--------------------------------------------------------------------------
+ Calcula las estadisticas necesarias (porcentaje de coincidencias, esperanza y 
+ desviacion tipica) las cuales utilizaremos para mostrar la no linealidad de DES
+ - Entrada:
+	 * Estructura donde guardamos los resultados
+	 * Número de pruebas a realizar
 
+ --------------------------------------------------------------------------*/
 void calcularEstadisticas(NL* resultados, int nPruebas) {
 
 	unsigned short*** Sboxes = NULL;
@@ -205,7 +223,7 @@ void calcularEstadisticas(NL* resultados, int nPruebas) {
 		getDatos(Sboxes, coincidencias); //Calculamos coincidencias
 	freeSboxes(Sboxes);
 
-	/* Computes the resultados */ // ¿?
+	//Procesa los resultados
 	for (j = 0; j < SBOX_OUTPUT_BITS + 1; j++)
 		aux[j] = j * (1. / SBOX_OUTPUT_BITS);
 
@@ -216,7 +234,7 @@ void calcularEstadisticas(NL* resultados, int nPruebas) {
 					coincidencias[(SBOX_OUTPUT_BITS + 1) * i + j]
 							* (1. / nPruebas);
 
-		/* Expectation */ // ¿?
+		//Calcula la esperanza
 		resultados->expectation[i] = 0;
 		for (j = 0; j < SBOX_OUTPUT_BITS + 1; j++)
 			resultados->expectation[i] +=
@@ -234,7 +252,13 @@ void calcularEstadisticas(NL* resultados, int nPruebas) {
 		resultados->desviacion[i] = sqrt(resultados->desviacion[i]); //Nos falta aplicar la raiz cuadrada
 	}
 }
+/*--------------------------------------------------------------------------
+ Imprime la salida
+ - Entrada:
+	 * Fichero donde imprimirlo
+	 * Resultados a imprimir
 
+ --------------------------------------------------------------------------*/
 void imprimirSalida(FILE* fsalida, NL* resultados) {
 
 	int i, j;
@@ -252,12 +276,15 @@ void imprimirSalida(FILE* fsalida, NL* resultados) {
 									* i + j]);
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Reserva memoria para guardar las S-boxes
+ Salida
+	 * Las S-boxes generadas
+ --------------------------------------------------------------------------*/
 unsigned short*** guardarMemSboxes() {
 
 	unsigned short*** Sboxes;
 	int i, j;
-	printf("HOLA [AAAAAA]\n");
 	//Reservamos memoria para guardas las cajas S
 	//Recordamos que cada caja es una matriz por lo que necesitaremos
 	//un array del tipo SBOXES[i][j][k], siendo SBOX = SBOXES[i]
@@ -274,7 +301,13 @@ unsigned short*** guardarMemSboxes() {
 
 	return Sboxes;
 }
-
+/*--------------------------------------------------------------------------
+ Mide la no linealidad de las S-boxes del DES, contando el numero de bits iguales
+ entre S(x+y) y S(x)+S(y)
+ - Entrada:
+	 * S-boxes
+	 * Coincidencias a contar
+ --------------------------------------------------------------------------*/
 void getDatos(unsigned short*** Sboxes, unsigned long int* coincidencias) {
 
 	BloqueDES x, y, S_xXORy, S_xXORS_y;
@@ -306,7 +339,11 @@ void getDatos(unsigned short*** Sboxes, unsigned long int* coincidencias) {
 		(coincidencias[(SBOX_OUTPUT_BITS + 1) * i + coincidences])++;
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Libera la memoria de las S-boxes
+ - Entrada:
+	 * S-boxes a liberar
+ --------------------------------------------------------------------------*/
 void freeSboxes(unsigned short*** Sboxes) {
 
 	int i, j;
@@ -320,8 +357,11 @@ void freeSboxes(unsigned short*** Sboxes) {
 	free(Sboxes);
 	Sboxes = NULL;
 }
-
-
+/*--------------------------------------------------------------------------
+ Obtiene las S-boxs
+ - Entrada:
+	 * S-boxes obtenidas
+ --------------------------------------------------------------------------*/
 void getSboxes(unsigned short*** Sboxes) {
 
 	int box, r, c;
@@ -331,7 +371,12 @@ void getSboxes(unsigned short*** Sboxes) {
 			for (c = 0; c < COLUMNS_PER_SBOX; c++)
 				Sboxes[box][r][c] = S_BOXES[box][r][c];
 }
-
+/*--------------------------------------------------------------------------
+ Crea un bloque nuevo
+ - Entrada:
+	 * Bloque b
+	 * Tamaño del bloque
+ --------------------------------------------------------------------------*/
 void nuevoBloque(BloqueDES* b, int tamBloque) {
 
 	int i;
@@ -339,8 +384,14 @@ void nuevoBloque(BloqueDES* b, int tamBloque) {
 	for (i = 1; i <= tamBloque; i++)
 		b->bloque[i] = naleatorio(0, 1);
 }
-
-//a xor b
+/*--------------------------------------------------------------------------
+ Realiza el xor de los bloques a y b
+ - Entrada:
+	 * Bloque a
+	 * Bloque b
+	 * Bloque resultado
+	 * Longitud
+ --------------------------------------------------------------------------*/
 void xorDES(BloqueDES* resultados, BloqueDES* a, BloqueDES* b, int longitud) {
 
 	int i;
@@ -349,7 +400,13 @@ void xorDES(BloqueDES* resultados, BloqueDES* a, BloqueDES* b, int longitud) {
 		resultados->bloque[i] = (a->bloque[i] != b->bloque[i]);
 }
 
-//Aplicamos la caja
+/*--------------------------------------------------------------------------
+ S-box del DES
+ - Entrada:
+	 * Bloque de entrada
+	 * Bloque resultados
+	 * S-box
+ --------------------------------------------------------------------------*/
 void SBoxGeneral(BloqueDES* resultados, BloqueDES* entrada,
 		short unsigned int*** Sbox) {
 
@@ -370,13 +427,17 @@ void SBoxGeneral(BloqueDES* resultados, BloqueDES* entrada,
 		resultados->bloque[1 + i * 4] = (valor / 8) % 2;
 	}
 }
-
-
+/*--------------------------------------------------------------------------
+ Generamos un numero aleatorio entre a y b
+ - Entrada:
+	 * Numeros a y b, extremos del intervalo
+ --------------------------------------------------------------------------*/
 int naleatorio(int a, int b) {
 
+	//Comprobamos que a es menor que b y si no lo es devolvemos a
 	if (a >= b)
 		return a;
-
+	//Generamos el numero aleatorio
 	return a + (rand() % (b - a + 1));
 }
 
