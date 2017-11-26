@@ -58,7 +58,7 @@ typedef struct {
 } ECB;
 
 
-int getArgs(int nArgs, char** args, int* flag, char* clave, int* tamBloque, char* bufferVecIni, int* lenVecIni, char* formatoEntrada, char* formatoSalida, char* ficheroentrada, int* entrada, char* ficherosalida, int* salida);
+int getArgs(int nArgs, char** args, int* modo, char* clave, char* formatoEntrada, char* formatoSalida, char* ficheroentrada, int* entrada, char* ficherosalida, int* salida);
 int getEntero(int nArgs, char** args, int* entero, char* flag, int flagLength);
 int getCadena(int nArgs, char** args, char* string, char* flag, int flagLength);
 int getFormato(int nArgs, char** args, char* formato, char* flag, int flagLength);

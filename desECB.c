@@ -144,12 +144,10 @@ static const unsigned short S_BOXES[NUM_S_BOXES][ROWS_PER_SBOX][COLUMNS_PER_SBOX
 
 int main(int argc, char** argv) {
 
-	int flag, tamBloque, lenVecIni, entrada, salida;
-	int lon;
-	int aux;
+	int flag, tamBloque = 64, entrada, salida;
+	int aux, lon;
 	char formatoEntrada, formatoSalida;
 	char clave[MAX_BUFFER];
-	char bufferVecIni[MAX_BUFFER];
 	char ficheroentrada[MAX_NOMBRE];
 	char ficherosalida[MAX_NOMBRE];
 	FILE* fentrada = NULL;
@@ -159,48 +157,28 @@ int main(int argc, char** argv) {
 	char textocifrado[MAX_TEXTO];
 
 	//Comprobamos que los argumentos son los correctos
-	if ((argc != 12) && (argc != 14) && (argc != 16) && (argc != 18)){
+	if ((argc != 6) && (argc != 8) && (argc != 10) && (argc != 12)){
 		printf("Número de argumentos incorrecto.\n");
-		printf("Uso del programa: ./desECB {-P | -I} [-i filein] [-o fileout].\n");	
+		printf("Uso del programa: ./desECB {-C|-D} {-if inputFormat} {-of outputFormat} [-k clave] [-i inputFile] [-o outputFile] .\n");	
 		return -1;
 	}
 	//Como en la practica anterior usamos una funcion auxiliar para conseguir los argumentos
-	if (getArgs(argc, argv, &flag, clave, &tamBloque, bufferVecIni, &lenVecIni, &formatoEntrada, &formatoSalida, ficheroentrada, &entrada, ficherosalida, &salida) == -1) {
+	if (getArgs(argc, argv, &flag, clave, &formatoEntrada, &formatoSalida, ficheroentrada, &entrada, ficherosalida, &salida) == -1) {
 		printf("Argumentos incorrectos.\n");
-		printf("Uso del programa: ./desECB {-P | -I} [-i filein] [-o fileout].\n");
+		printf("Uso del programa: ./desECB {-C|-D} {-if inputFormat} {-of outputFormat} [-k clave] [-i inputFile] [-o outputFile] .\n");
 		return -1;
 	}
 	
 	//Ahora vamos a comprar que los argumentos del DES sean correctos..
 
-	//Tamanyo de bloque entre los limites
-	if ((tamBloque < 1) || (tamBloque > TAM_BLOQUE)) {
-		fprintf(stderr,"ERROR: Block size must be between 1 and %d\n",TAM_BLOQUE);
-		return -1;
-	}
-	//Tamanyo de bloque multiplo de 8
-	if ((tamBloque % 8) != 0) {
-		fprintf(stderr,"ERROR: Block size must be a multiple of 8\n");
-		return -1;
-	}
-	//Vector de inicializacion correcto
-	if ((lenVecIni < 1) || (lenVecIni > tamBloque)) {
-		fprintf(stderr,"ERROR: IV length must be between 1 and %d\n",tamBloque);
-		return -1;
-	}
-	//Vector de inicializacion multiplo de 8
-	if ((lenVecIni % 4) != 0) {
-		fprintf(stderr,"ERROR: IV length must be a multiple of 4\n");
-		return -1;
-	}
 	//Comprobamos que el archivo de entrada esta en un lenguaje que entendamos
 	if ((formatoEntrada != FORMATO_HEX) && (formatoEntrada != FORMATO_ASCII)) {
-		fprintf(stderr,"ERROR: Wrong input formato\n");
+		fprintf(stderr,"ERROR: Fomato de entrada incorrecto. 'h' para Hexadecimal y 'a' para Ascii.\n");
 		return -1;
 	}
 	//Comprobamos que el lenguaje de salida lo conocemos
 	if ((formatoSalida != FORMATO_HEX) && (formatoSalida != FORMATO_ASCII)) {
-		fprintf(stderr,"ERROR: Wrong input formato\n");
+		fprintf(stderr,"ERROR: Formao de salida incorrecto. 'h' para Hexadecimal y 'a' para Ascii.\n");
 		return -1;
 	}
 	
@@ -264,9 +242,6 @@ Obtiene los argumentos
 	* Array de argumentos
 	* Flag indicando si se cifra o descifra
 	* Clave
-	* Tamaño del bloque
-	* IV
-	* Longitud del IV
 	* Formato de entrada
 	* Formato de salida
 	* Nombre del fichero de entrada
@@ -277,28 +252,16 @@ Obtiene los argumentos
 	* -1 si ocurre algun error
 	* 0 si va bien
 --------------------------------------------------------------------------*/
-int getArgs(int nArgs, char** args, int* flag, char* clave, int* tamBloque, char* bufferVecIni, int* lenVecIni, char* formatoEntrada, char* formatoSalida, char* ficheroentrada, int* entrada, char* ficherosalida, int* salida) {
+int getArgs(int nArgs, char** args, int* modo, char* clave, char* formatoEntrada, char* formatoSalida, char* ficheroentrada, int* entrada, char* ficherosalida, int* salida) {
 
-	if (getModo(nArgs, args, flag) != 1) return -1;
-	if ((*flag) == 2) {
-		if (getCadena(nArgs, args, clave, "-k", 2) != 1) return -1;
-	}
-	if (getEntero(nArgs, args, tamBloque, "-s", 2) != 1) return -1;
-	if (getCadena(nArgs, args, bufferVecIni, "-iv", 3) != 1) return -1;
-	if (getEntero(nArgs, args, lenVecIni, "-l", 2) != 1) return -1;
+	if (getModo(nArgs, args, modo) != 1) return -1;
+	if ((*modo) == 2) if (getCadena(nArgs, args, clave, "-k", 2) != 1) return -1;//La clave es necesaria solo para desencriptar
+	else (getCadena(nArgs, args, clave, "-k", 2);
 	if (getFormato(nArgs, args, formatoEntrada, "-if", 3) != 1) return -1;
 	if (getFormato(nArgs, args, formatoSalida, "-of", 3) != 1) return -1;
 
-	if ((((*flag) == 1) && (nArgs == 8)) || (((*flag) == 2) && (nArgs == 10))) {
-		*entrada = 0;
-		*salida = 0;
-	}
-	else {
-		if (((*entrada) = getCadena(nArgs, args, ficheroentrada, "-i", 2)) == -1) return -1;
-		if (((*salida) = getCadena(nArgs, args, ficherosalida, "-o", 2)) == -1) return -1;
-		if (((((*flag) == 1) && (nArgs == 14)) || (((*flag) == 2) && (nArgs == 16))) && (*entrada + *salida != 1)) return -1;
-		if (((((*flag) == 1) && (nArgs == 16)) || (((*flag) == 2) && (nArgs == 18))) && (*entrada + *salida != 2)) return -1;
-	}
+	if (((*entrada) = getCadena(nArgs, args, ficheroentrada, "-i", 2)) == -1) return -1;
+	if (((*salida) = getCadena(nArgs, args, ficherosalida, "-o", 2)) == -1) return -1;
 
 	return 0;
 }
@@ -358,7 +321,6 @@ int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 				flag = 1;
 			}
 		}
-
 	return flag;
 }
 /*--------------------------------------------------------------------------
