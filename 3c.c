@@ -26,7 +26,6 @@ int POLS_AUX[2][BITS_OUT_BOX + 1] = { { 1, 1, 1, 1, 1 }, { 1, 1, 0, 0, 1 }, };
 
 int* POLS[2] = { POLS_AUX[0], POLS_AUX[1] };
 
-/* Indices pairs for the S-boxes output bits */
 static const unsigned short OUTPUT_PAIRS[SBOX_OUTPUT_PAIRS][2] = { { 0, 1 }, {
 		0, 2 }, { 0, 3 }, { 1, 2 }, { 1, 3 }, { 2, 3 } };
 
@@ -126,6 +125,18 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
+/*--------------------------------------------------------------------------
+ Obtiene los argumentos
+ - Entrada:
+ 	* Número de argumentos
+ 	* Array de argumentos
+ 	* Numero de pruebas a realizar
+ 	* Puntero al fichero de salida
+ 	* Salida
+ - Salida:
+ 	* -1 si ocurre algun error
+ 	* 0 si va bien
+ --------------------------------------------------------------------------*/
 int getArgs(int nArgs, char** args, int* criterio, int* nPruebas,
 		char* ficherosalida, int* salida) {
 
@@ -141,7 +152,17 @@ int getArgs(int nArgs, char** args, int* criterio, int* nPruebas,
 
 	return 0;
 }
-
+/*--------------------------------------------------------------------------
+ Obtiene el criterio: BIC o SAC (o ambos)
+ - Entrada:
+ 	* Número de argumentos
+ 	* Array de argumentos
+ 	* Criterio
+ - Salida:
+ 	* -1 si ocurre algun error
+ 	* 0 si no se introduce ninguno
+	* 1 si se introduce el criterio de manera correcta
+ --------------------------------------------------------------------------*/
 int getCriterio(int nArgs, char** args, int* criterio) {
 
 	int i;
@@ -176,14 +197,14 @@ int getCriterio(int nArgs, char** args, int* criterio) {
 /*--------------------------------------------------------------------------
  Obtiene un entero
  - Entrada:
- * Número de argumentos
- * Array de argumentos
- * Puntero al entero
- * Puntero al modo
- * Longitud de la cadena
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Puntero al entero
+	 * Puntero al modo
+	 * Longitud de la cadena
  - Salida:
- * -1 si ocurre algun error
- * 1 si va bien
+	 * -1 si ocurre algun error
+	 * 1 si va bien
  --------------------------------------------------------------------------*/
 int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud) {
 
@@ -210,14 +231,14 @@ int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud) {
 /*--------------------------------------------------------------------------
  Obtiene una cadena
  - Entrada:
- * Número de argumentos
- * Array de argumentos
- * Puntero a la cadena
- * Puntero al modo
- * Longitud de la cadena
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Puntero a la cadena
+	 * Puntero al modo
+	 * Longitud de la cadena
  - Salida:
- * -1 si ocurre algun error
- * 1 si va bien
+	 * -1 si ocurre algun error
+	 * 1 si va bien
  --------------------------------------------------------------------------*/
 int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 
@@ -237,7 +258,12 @@ int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 
 	return flag;
 }
-
+/*--------------------------------------------------------------------------
+ Calcula las estadisticas asociadas al SAC (probabilidades)
+ - Entrada:
+	 * Estructura de SAC con los datos necesarios
+	 * Número de pruebas a realizar
+ --------------------------------------------------------------------------*/
 void calcularEstadisticasSAC(SAC* datos, int nPruebas) {
 
 	unsigned short*** Sboxes = NULL;
@@ -259,16 +285,23 @@ void calcularEstadisticasSAC(SAC* datos, int nPruebas) {
 		pruebaSAC(Sboxes, cambiosDeBit);
 	freeSboxes(Sboxes);
 
-	//Calculamos la media
+	//Calculamos las probabilidades dividiendo los casos favorables entre el numero total de casos
 	for (i = 0; i < NUM_S_BOXES; i++)
 		for (j = 0; j < SBOX_OUTPUT_BITS; j++)
 			for (k = 0; k < SBOX_INPUT_BITS; k++)
 				datos->condProb[i][j][k] = (cambiosDeBit[i][j][k])
 						* (1. / nPruebas);
 
-	freeMemSAC(cambiosDeBit); //Libermoas la memoria que usamos para guardar las diferencias
+	freeMemSAC(cambiosDeBit); //Liberamos la memoria que usamos para guardar las diferencias
 }
-
+/*--------------------------------------------------------------------------
+ Imprime la salida
+ - Entrada:
+	 * Fichero donde imprimirlo
+	 * Datos del BIC a imprimir
+	 * Datos del SAC a imprimir
+	 * Criterio que indica qué datos imprimir
+ --------------------------------------------------------------------------*/
 void imprimirSalida(FILE* fsalida, BIC* datosBIC, SAC* datosSAC, int criterio) {
 
 	int i, j, k;
@@ -330,7 +363,12 @@ void imprimirSalida(FILE* fsalida, BIC* datosBIC, SAC* datosSAC, int criterio) {
 	}
 
 }
-
+/*--------------------------------------------------------------------------
+ Calcula las estadísticas de BIC (probabilidades)
+ - Entrada:
+	 * Estructura BIC con los datos
+	 * Numero de pruebas
+ --------------------------------------------------------------------------*/
 void calcularEstadisticasBIC(BIC* datos, int nPruebas) {
 
 	unsigned short*** Sboxes = NULL;
@@ -377,7 +415,11 @@ void calcularEstadisticasBIC(BIC* datos, int nPruebas) {
 			}
 	freeMemBIC(paresCambiados);
 }
-
+/*--------------------------------------------------------------------------
+ Reserva memoria para la estructura SAC
+ - Salida:
+	 * Estructura con la memoria reservada
+ --------------------------------------------------------------------------*/
 unsigned long int*** guardarMemSAC() {
 
 	unsigned long int*** SACacc;
@@ -395,7 +437,11 @@ unsigned long int*** guardarMemSAC() {
 
 	return SACacc;
 }
-
+/*--------------------------------------------------------------------------
+ Libera la memoria de una estructura SAC
+ - Entrada:
+	 * Puntero a la estructura que se ha de liberar
+ --------------------------------------------------------------------------*/
 void freeMemSAC(unsigned long int*** SACacc) {
 
 	int i, j;
@@ -435,7 +481,12 @@ unsigned short*** guardarMemSboxes() {
 
 	return Sboxes;
 }
-
+/*--------------------------------------------------------------------------
+ Mide el SAC en DES para cada S-box
+ - Entrada:
+	 * S-boxes
+	 * Numero de cambios en cada bit de salida cuando hay un cambio en un bit de entrada
+ --------------------------------------------------------------------------*/
 void pruebaSAC(unsigned short*** Sboxes, unsigned long int*** cambiosDeBit) {
 
 	BloqueDES entrada, salida;
@@ -446,7 +497,7 @@ void pruebaSAC(unsigned short*** Sboxes, unsigned long int*** cambiosDeBit) {
 
 	//En cada iteracion cambiamos los bits y ejecutamos dos SBOX, una con
 	//la entrada original y otra con la entrada transformada. Despues comparamos
-	//las diferencias en las dos salidas
+	//las diferencias que se han encontrado en las dos salidas
 	for (k = 0; k < SBOX_INPUT_BITS; k++) {
 
 		copiarBloque(&entrada2, &entrada, SBOX_INPUT_BITS * NUM_S_BOXES);
@@ -462,7 +513,11 @@ void pruebaSAC(unsigned short*** Sboxes, unsigned long int*** cambiosDeBit) {
 					(cambiosDeBit[i][j][k])++;
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Libera las Sboxes
+ - Entrada:
+	 * Sboxes a liberar
+ --------------------------------------------------------------------------*/
 void freeSboxes(unsigned short*** Sboxes) {
 
 	int i, j;
@@ -479,9 +534,9 @@ void freeSboxes(unsigned short*** Sboxes) {
 /*--------------------------------------------------------------------------
  S-box del DES
  - Entrada:
- * Bloque de entrada
- * Bloque resultados
- * S-box
+	 * Bloque de entrada
+	 * Bloque resultados
+	 * S-box
  --------------------------------------------------------------------------*/
 void SBoxGeneral(BloqueDES* resultado, BloqueDES* entrada,
 		short unsigned int*** Sbox) {
@@ -503,7 +558,11 @@ void SBoxGeneral(BloqueDES* resultado, BloqueDES* entrada,
 		resultado->bloque[1 + i * 4] = (valor / 8) % 2;
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Reserva memoria para la estructura BIC
+ - Salida:
+	 * Estructura con la memoria reservada
+ --------------------------------------------------------------------------*/
 unsigned long int*** guardarMemBIC() {
 
 	unsigned long int*** BICacc;
@@ -521,7 +580,12 @@ unsigned long int*** guardarMemBIC() {
 
 	return BICacc;
 }
-
+/*--------------------------------------------------------------------------
+ Mide las frecuencias conjuntas para cada S-box para calcular el BIC en DES
+ - Entrada:
+	 * S-boxes
+	 * Numero de cambios en cada bit de salida cuando hay un cambio en un bit de entrada
+ --------------------------------------------------------------------------*/
 void pruebaBIC(unsigned short*** Sboxes, unsigned long int*** paresCambiados) {
 
 	BloqueDES entrada, salida;
@@ -531,7 +595,7 @@ void pruebaBIC(unsigned short*** Sboxes, unsigned long int*** paresCambiados) {
 
 	crearBloque(&entrada, SBOX_INPUT_BITS * NUM_S_BOXES);
 
-	//Como en la prueba SAC volvemos a cambiar los bits d eentrada
+	//Como en la prueba SAC volvemos a cambiar los bits de entrada
 	//solo que ahora comparamos en pares
 	for (k = 0; k < SBOX_INPUT_BITS; k++) {
 
@@ -544,7 +608,12 @@ void pruebaBIC(unsigned short*** Sboxes, unsigned long int*** paresCambiados) {
 		for (i = 0; i < NUM_S_BOXES; i++)
 			for (j = 0; j < SBOX_OUTPUT_PAIRS; j++) {
 
-				/* Check if each of the two output bits has changed */
+				
+				//Comprueba si cada par de bits de salida ha cambiado
+				//(Recordamos que se quiere la distribución conjunta de prob de cambio de cada par de bits de salida dado
+				//un cambio en un bit de entrada, para posteriormente calcular la probabilidad condicionada de un cambio en
+				//un bit de salidad dado un cambio en uno de entrada y un cambio o no cambio en otro bit de salida)
+				
 				if (salida2.bloque[i * SBOX_OUTPUT_BITS + OUTPUT_PAIRS[j][0] + 1]
 						!= salida.bloque[i * SBOX_OUTPUT_BITS
 								+ OUTPUT_PAIRS[j][0] + 1])
@@ -558,8 +627,7 @@ void pruebaBIC(unsigned short*** Sboxes, unsigned long int*** paresCambiados) {
 				else
 					change2 = 0;
 
-				//Segun que pares se haya cambiado aumentamos los datos
-				//de pares cambiados
+				//Segun que pares se haya cambiado aumentamos los datos de pares cambiados
 				if (change1 && change2)
 					(paresCambiados[i][4 * j][k])++;
 				else if (change1 && !change2)
@@ -571,7 +639,11 @@ void pruebaBIC(unsigned short*** Sboxes, unsigned long int*** paresCambiados) {
 			}
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Libera la memoria del BIC
+ - Entrada:
+	 * Estructura BIC a liberar
+ --------------------------------------------------------------------------*/
 void freeMemBIC(unsigned long int*** BICacc) {
 
 	int i, j;
@@ -588,7 +660,7 @@ void freeMemBIC(unsigned long int*** BICacc) {
 /*--------------------------------------------------------------------------
  Obtiene las S-boxs
  - Entrada:
- * S-boxes obtenidas
+	 * S-boxes obtenidas
  --------------------------------------------------------------------------*/
 void getSboxes(unsigned short*** Sboxes) {
 
@@ -602,8 +674,8 @@ void getSboxes(unsigned short*** Sboxes) {
 /*--------------------------------------------------------------------------
  Crea un bloque
  - Entrada:
- * Bloque a crear
- * Tamaño del bloque
+	 * Bloque a crear
+	 * Tamaño del bloque
  --------------------------------------------------------------------------*/
 void crearBloque(BloqueDES* b, int tamBloque) {
 
@@ -615,9 +687,9 @@ void crearBloque(BloqueDES* b, int tamBloque) {
 /*--------------------------------------------------------------------------
  Copia un bloque
  - Entrada:
- * Bloque a copiar
- * Bloque destino
- * Tamaño del bloque
+	 * Bloque a copiar
+	 * Bloque destino
+	 * Tamaño del bloque
  --------------------------------------------------------------------------*/
 void copiarBloque(BloqueDES* resultado, BloqueDES* entrada, int lon) {
 
@@ -640,9 +712,9 @@ void cambiarDatosEntrada(BloqueDES* entradaSBOX, int bit) {
 /*--------------------------------------------------------------------------
  Generamos un numero aleatorio entre a y b
  - Entrada:
- * Numeros a y b, extremos del intervalo
+	 * Numeros a y b, extremos del intervalo
  - Salida:
- * Numero generado
+	 * Numero generado
  --------------------------------------------------------------------------*/
 int naleatorio(int a, int b) {
 
