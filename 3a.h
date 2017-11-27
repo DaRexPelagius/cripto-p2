@@ -6,9 +6,7 @@
 #include <math.h>
 #include <time.h>
 
-/*--------------------------------------------------------------------------
- CONSTANTS
- --------------------------------------------------------------------------*/
+
 #define MAX_TEXTO 10000
 #define MAX_NOMBRE 256
 #define ENCRYPT_FLAG 1
@@ -20,7 +18,6 @@
 #define BITS_IN_KEY 56
 #define BITS_IN_PC1 56
 #define BITS_IN_PC2 48
-#define BITS_IN_HALFBLOCK BITS_IN_KEY/2
 #define BITS_IN_IP 64
 #define BITS_IN_E 48
 #define BITS_IN_P 32
@@ -39,10 +36,9 @@
 typedef struct {
 	/* Expectation of linearity of each S-box */
 	float expectation[NUM_S_BOXES]; //
-	/* Standard desviacion of linearity of each S-box */
 	float desviacion[NUM_S_BOXES]; //Desviacion tipica de la linealidad de cada caja
 	float coincidencias[NUM_S_BOXES * (SBOX_OUTPUT_BITS + 1)]; //Porcentaje de coincidencias
-} NL;
+} STATS;
 
 typedef struct {
 	uint8_t bloque[DES_BLOCK_SIZE + 1]; /* block[0] is never used */
@@ -52,8 +48,8 @@ int getArgs(int nArgs, char** args, int* nPruebas, char* ficherosalida,
 		int* salida);
 int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud);
 int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud);
-void imprimirSalida(FILE* outputFile, NL* resultados);
-void calcularEstadisticas(NL* resultados, int nPruebas);
+void imprimirSalida(FILE* outputFile, STATS* resultados);
+void calcularEstadisticas(STATS* resultados, int nPruebas);
 unsigned short*** guardarMemSboxes();
 void freeSboxes(unsigned short*** Sboxes);
 void getDatos(unsigned short*** Sboxes, unsigned long int* coincidencias);

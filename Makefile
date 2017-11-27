@@ -22,5 +22,8 @@ desECB: desECB.c desECB.h
 3c: 3c.c 3c.h 
 	gcc 3c.c -o 3c -Wall -O2 -lm -g	
 	
+4a: 4a.c 4a.h 
+	gcc 4a.c -o 4a -Wall -O2 -lm -g	
+	
 clean:
 	rm 1 desCBC desECB 3a 3b 3c

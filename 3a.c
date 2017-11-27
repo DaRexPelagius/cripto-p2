@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
 	int nPruebas, salida;
 	char ficherosalida[MAX_NOMBRE];
 	FILE* fsalida = NULL;
-	NL resultados;
+	STATS resultados;
 
 	//Comprobamos que al menos el numero de args es el correcto
 	if ((argc != 3) && (argc != 5)) {
@@ -202,7 +202,7 @@ int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 	 * Estructura donde guardamos los resultados
 	 * Número de pruebas a realizar
  --------------------------------------------------------------------------*/
-void calcularEstadisticas(NL* resultados, int nPruebas) {
+void calcularEstadisticas(STATS* resultados, int nPruebas) {
 
 	unsigned short*** Sboxes = NULL;
 	unsigned long int coincidencias[NUM_S_BOXES * (SBOX_OUTPUT_BITS + 1)];
@@ -257,13 +257,13 @@ void calcularEstadisticas(NL* resultados, int nPruebas) {
 	 * Fichero donde imprimirlo
 	 * Resultados a imprimir
  --------------------------------------------------------------------------*/
-void imprimirSalida(FILE* fsalida, NL* resultados) {
+void imprimirSalida(FILE* fsalida, STATS* resultados) {
 
 	int i, j;
 
 	for (i = 0; i < NUM_S_BOXES; i++) {
 		fprintf(fsalida, "Datos sobre S-box numero %d:\n", i + 1);
-		fprintf(fsalida, "- Expectation:\t%.2f\n", resultados->expectation[i]);
+		fprintf(fsalida, "- Esperanza:\t%.2f\n", resultados->expectation[i]);
 		fprintf(fsalida, "- Desviacion tipica:\t%.2f\n",
 				resultados->desviacion[i]);
 		fprintf(fsalida, "- Porcentaje de coincidencias en los bits:\n");
