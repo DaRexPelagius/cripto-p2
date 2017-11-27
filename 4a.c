@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
 int getArgs(int nArgs, char** args, int* nPruebas, char* ficherosalida,
 		int* salida) {
 
-	if (getEntero(nArgs, args, nPruebas, "-t", 2) != 1)
+	if (getEntero(nArgs, args, nPruebas, "-n", 2) != 1)
 		return -1;
 
 	if (nArgs == 3)
@@ -378,7 +378,7 @@ void freePolinomio(struct POLYNOMIAL* p) {
 	p->coeficientes = NULL;
 }
 
-int getgrado(struct POLYNOMIAL* p) {
+int getGrado(struct POLYNOMIAL* p) {
 	int i;
 	if (p->grado < 0)
 		return -1;
