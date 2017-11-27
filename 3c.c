@@ -187,7 +187,7 @@ int getCriterio(int nArgs, char** args, int* criterio) {
 			if (aux)
 				return -1;
 			else {
-				*criterio = 2;
+				*criterio = 3;
 				aux = 1;
 			}
 		}
