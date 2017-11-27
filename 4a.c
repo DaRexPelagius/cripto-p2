@@ -216,7 +216,7 @@ void imprimirSalida(FILE* fsalida, NL* resultados) {
 				100 * resultados->distribucion[j]);
 }
 /*--------------------------------------------------------------------------
- Obtiene la caja inversa a traves de la transformacion afin
+ Obtiene la caja de encriptacion a traves de la transformacion afin
  - Entrada:
 	 * Puntero a la estructura
  --------------------------------------------------------------------------*/
@@ -232,7 +232,7 @@ void getCajaAES(struct AESBOX* box) {
 	 * Traslacion
 	 * Byte
  --------------------------------------------------------------------------*/
-uint8_t transformacionAfin(uint8_t b, int *matriz[], int *traslacion) {
+uint8_t transformacionAfin(uint8_t b, int *matriz[], int *translacion) {
 	int bits[BITS_IN_BYTE];
 	int bits2[BITS_IN_BYTE];
 	int i, j;

@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
 	struct AESBOX box;
 
 	//Comprobamos que al menos el numero de args es el correcto
-	if ((argc != 3) && (argc != 5)) {
+	if ((argc != 2) && (argc != 4)) {
 		printf("Numero de argumentos incorrecto.\n");
 		printf("Uso: ./4b {-C caja directa | -D caja inversa} [-o fichero salida]\n");
 		return -1;
@@ -69,6 +69,19 @@ int main(int argc, char** argv) {
 	fclose(fsalida);
 	return 0;
 }
+
+/*--------------------------------------------------------------------------
+ Obtiene los argumentos
+ - Entrada:
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Flag con el modo
+	 * Puntero al fichero de salida
+	 * Fichero de salida
+ - Salida:
+	 * -1 si ocurre algun error
+	 * 0 si va bien
+ --------------------------------------------------------------------------*/
 
 int getArgs(int nArgs, char** args, int* flag, char* ficherosalida,
 		int* salida) {
@@ -147,14 +160,22 @@ int getModo(int nArgs, char** args, int* modo) {
 	}
 	return flag;
 }
-
+/*--------------------------------------------------------------------------
+ Obtiene la caja de encriptacion a traves de la transformacion afin
+ - Entrada:
+	 * Puntero a la estructura
+ --------------------------------------------------------------------------*/
 void getCajaAES(struct AESBOX* box) {
 	int i;
 	for (i = 0; i < TAM_BOX; ++i)
 		box->map[i] = transformacionAfin(calcularInverso(i), DIRECT_MATRIX,
 				DIRECT_TRANSLATION);
 }
-
+/*--------------------------------------------------------------------------
+ Obtiene la caja de desencriptacion a traves de la transformacion afin
+ - Entrada:
+	 * Puntero a la estructura
+ --------------------------------------------------------------------------*/
 void getCajaAESInversa(struct AESBOX* box) {
 	int i;
 	for (i = 0; i < TAM_BOX; ++i)
@@ -162,7 +183,12 @@ void getCajaAESInversa(struct AESBOX* box) {
 				transformacionAfin(i, INVERSE_MATRIX, INVERSE_TRANSLATION));
 
 }
-
+/*--------------------------------------------------------------------------
+ Imprime la salida
+ - Entrada:
+	 * Fichero donde imprimirlo
+	 * Resultados a imprimir
+ --------------------------------------------------------------------------*/
 void imprimirSalida(FILE* f, struct AESBOX* box) {
 	int i, j;
 
@@ -172,7 +198,12 @@ void imprimirSalida(FILE* f, struct AESBOX* box) {
 		fprintf(f, "\n");
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Obtiene el inverso de un byte visto como un polinomio en el cuerpo de Galois
+ asociado al es
+ - Entrada:
+	 * Byte
+ --------------------------------------------------------------------------*/
 uint8_t calcularInverso(uint8_t b) {
 	struct POLYNOMIAL mod, p, inv;
 	uint8_t ret;
@@ -196,7 +227,13 @@ uint8_t calcularInverso(uint8_t b) {
 
 	return ret;
 }
-
+/*--------------------------------------------------------------------------
+ Realiza la transformacion afin dada una matriz y una traslacion
+ - Entrada:
+	 * Matriz
+	 * Traslacion
+	 * Byte
+ --------------------------------------------------------------------------*/
 uint8_t transformacionAfin(uint8_t b, int *matriz[], int *translacion) {
 	int bits[BITS_IN_BYTE];
 	int bits2[BITS_IN_BYTE];
@@ -226,12 +263,22 @@ uint8_t transformacionAfin(uint8_t b, int *matriz[], int *translacion) {
 
 	return resultado;
 }
-
+/*--------------------------------------------------------------------------
+ Inicializa un polinomio
+ - Entrada:
+	 * Puntero a la estructura del polinomio
+ --------------------------------------------------------------------------*/
 void iniPolinomio(struct POLYNOMIAL* p) {
 	p->grado = -1;
 	p->coeficientes = NULL;
 }
-
+/*--------------------------------------------------------------------------
+ Le da el valor a un polinomio
+ - Entrada:
+	 * Polinomio
+	 * Coeficientes
+	 * Grado n
+ --------------------------------------------------------------------------*/
 void setPolinomio(struct POLYNOMIAL* p, int* coefs, int n) {
 	int i;
 
@@ -242,7 +289,12 @@ void setPolinomio(struct POLYNOMIAL* p, int* coefs, int n) {
 		p->coeficientes[i] = coefs[i] % 2;
 	p->grado = n;
 }
-
+/*--------------------------------------------------------------------------
+ Convierte un byte en un polinomio
+ - Entrada:
+	 * Polinomio
+	 * Byte
+ --------------------------------------------------------------------------*/
 void pasarByteAPolinomio(struct POLYNOMIAL *p, uint8_t b) {
 	int i;
 
@@ -252,7 +304,13 @@ void pasarByteAPolinomio(struct POLYNOMIAL *p, uint8_t b) {
 	for (i = 0; i < BITS_IN_BYTE; ++i)
 		p->coeficientes[i] = (b >> i) % 2;
 }
-
+/*--------------------------------------------------------------------------
+ Calcula el polinomio inverso
+ - Entrada:
+	 * Polinomio destino
+	 * Modulo
+	 * Polinomio a calcular el inverso
+ --------------------------------------------------------------------------*/
 void calcularPolInverso(struct POLYNOMIAL* dest, struct POLYNOMIAL* s,
 		struct POLYNOMIAL* mod) {
 	struct POLYNOMIAL q, r, p1, p2, v1, v2;
@@ -301,7 +359,13 @@ void calcularPolInverso(struct POLYNOMIAL* dest, struct POLYNOMIAL* s,
 	freePolinomio(&v1);
 	freePolinomio(&v2);
 }
-
+/*--------------------------------------------------------------------------
+ Convierte un polinomio en un byte
+ - Entrada:
+	 * Polinomio
+ - Salida:
+	 * Byte
+ --------------------------------------------------------------------------*/
 uint8_t pasarPolinomioAByte(struct POLYNOMIAL* p) {
 	uint8_t b = 0;
 	int i;
@@ -310,13 +374,23 @@ uint8_t pasarPolinomioAByte(struct POLYNOMIAL* p) {
 		b += (p->coeficientes[i] << i);
 	return b;
 }
-
+/*--------------------------------------------------------------------------
+ Libera la memoria de un polinomio
+ - Entrada:
+	 * Polinomio
+ --------------------------------------------------------------------------*/
 void freePolinomio(struct POLYNOMIAL* p) {
 	p->grado = -1;
 	free(p->coeficientes);
 	p->coeficientes = NULL;
 }
-
+/*--------------------------------------------------------------------------
+ Obtiene el grado de un polinomio
+ - Entrada:
+	 * Polinomio
+ - Salida:
+	 * Grado n
+ --------------------------------------------------------------------------*/
 int getGrado(struct POLYNOMIAL* p) {
 	int i;
 	if (p->grado < 0)
@@ -325,7 +399,12 @@ int getGrado(struct POLYNOMIAL* p) {
 		;
 	return i;
 }
-
+/*--------------------------------------------------------------------------
+ Copia un polinomio
+ - Entrada:
+	 * Polinomio entrada
+	 * Polinomio resultado
+ --------------------------------------------------------------------------*/
 void copiarPolinomios(struct POLYNOMIAL* resultado, struct POLYNOMIAL* entrada) {
 	int* aux = NULL;
 	int d = entrada->grado;
@@ -340,7 +419,14 @@ void copiarPolinomios(struct POLYNOMIAL* resultado, struct POLYNOMIAL* entrada) 
 	resultado->coeficientes = aux;
 	resultado->grado = d;
 }
-
+/*--------------------------------------------------------------------------
+ Divide polinomios
+ - Entrada:
+	 * Polinomio dividendo
+	 * Polinomio divisor
+	 * Polinomio cociente
+	 * Polinomio resto
+ --------------------------------------------------------------------------*/
 void dividirPolinomios(struct POLYNOMIAL* q, struct POLYNOMIAL* r, struct POLYNOMIAL* div,
 		struct POLYNOMIAL* dvsr) {
 	int d1, d2;
@@ -367,13 +453,22 @@ void dividirPolinomios(struct POLYNOMIAL* q, struct POLYNOMIAL* r, struct POLYNO
 	freePolinomio(&qAux);
 	freePolinomio(&rAux);
 }
-
+/*--------------------------------------------------------------------------
+ Borra un polinomio
+ - Entrada:
+	 * Polinomio
+ --------------------------------------------------------------------------*/
 void clearPolinomio(struct POLYNOMIAL* p) {
 	int i;
 	for (i = 0; i <= p->grado; ++i)
 		p->coeficientes[i] = 0;
 }
-
+/*--------------------------------------------------------------------------
+ Fija el valor del coeficiente n a 1
+ - Entrada:
+	 * Polinomio a
+	 * Coeficiente n
+ --------------------------------------------------------------------------*/
 void establecerCoeficienteN(struct POLYNOMIAL* p, int n) {
 	int d = p->grado, i;
 
@@ -394,7 +489,13 @@ void establecerCoeficienteN(struct POLYNOMIAL* p, int n) {
 	p->coeficientes[n] = 1;
 	p->grado = n;
 }
-
+/*--------------------------------------------------------------------------
+ Multiplica polinomios
+ - Entrada:
+	 * Polinomio a
+	 * Polinomio b
+	 * Polinomio resultado
+ --------------------------------------------------------------------------*/
 void multiplicaPolinomios(struct POLYNOMIAL* res, struct POLYNOMIAL* a,
 		struct POLYNOMIAL* b) {
 	int d1 = a->grado;
@@ -424,7 +525,13 @@ void multiplicaPolinomios(struct POLYNOMIAL* res, struct POLYNOMIAL* a,
 	res->coeficientes = aux;
 	res->grado = d;
 }
-
+/*--------------------------------------------------------------------------
+ Suma polinomios
+ - Entrada:
+	 * Polinomio a
+	 * Polinomio b
+	 * Polinomio resultado
+ --------------------------------------------------------------------------*/
 void sumaPolinomios(struct POLYNOMIAL* dest, struct POLYNOMIAL* s1,
 		struct POLYNOMIAL* s2) {
 	int* aux = NULL;
@@ -452,7 +559,14 @@ void sumaPolinomios(struct POLYNOMIAL* dest, struct POLYNOMIAL* s1,
 	dest->coeficientes = aux;
 	dest->grado = d;
 }
-
+/*--------------------------------------------------------------------------
+ Fija un polinomio como copia de otro polinomio multiplicado por un monomio de
+ grado n
+ - Entrada:
+ 	* Polinomio a ser asignado
+  	* Polinomio origen
+	* Grado del monomio
+ --------------------------------------------------------------------------*/
 void desplazarPolinomio(struct POLYNOMIAL* resultado,
 		struct POLYNOMIAL* entrada, int n) {
 	int* aux = NULL;
