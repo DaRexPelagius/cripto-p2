@@ -1,4 +1,4 @@
-#include "EfectoAvalanchaDES.h"
+#include "3b.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
 	if ((argc != 3) && (argc != 5)) {
 		printf("El numero de parametros es erroneo.\n");
 		printf(
-				"Uso: ./EfectoAvalanchaDES {-n numero de pruebas} [-o fichero de salida] \n");
+				"Uso: ./3b {-n numero de pruebas} [-o fichero de salida] \n");
 		return -1;
 	}
 
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
 	if (getArgs(argc, argv, &nPruebas, ficherosalida, &salida) == -1) {
 		printf("Los argumentos son erroneos.\n");
 		printf(
-				"Uso: ./EfectoAvalanchaDES {-n numero de pruebas} [-o fichero de salida] \n");
+				"Uso: ./3b {-n numero de pruebas} [-o fichero de salida] \n");
 		return -1;
 	}
 

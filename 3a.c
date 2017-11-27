@@ -1,4 +1,4 @@
-#include "NL_DES.h"
+#include "3a.h"
 #include <math.h>
 
 int MATRIX_AUX2[ROWS_PER_SBOX][BITS_OUT_BOX][BITS_OUT_BOX] = { { { 1, 1, 1, 0 },
@@ -69,21 +69,21 @@ int main(int argc, char** argv) {
 	//Comprobamos que al menos el numero de args es el correcto
 	if ((argc != 3) && (argc != 5)) {
 		printf("Numero de argumentos incorrecto.\n");
-		printf("Uso: ./NL_DES {-n numero de pruebas} [-o fichero salida]\n");
+		printf("Uso: ./3a {-n numero de pruebas} [-o fichero salida]\n");
 		return -1;
 	}
 
 	//Cogemos los argumentos de entrada
 	if (getArgs(argc, argv, &nPruebas, ficherosalida, &salida) == -1) {
 		printf("Argumentos incorrectos.\n");
-		printf("Uso: ./NL_DES {-n numero de pruebas} [-o fichero salida]\n");
+		printf("Uso: ./3a {-n numero de pruebas} [-o fichero salida]\n");
 		return -1;
 	}
 
 	//Comprobamos que el numero de pruebas es positivo
 	if (nPruebas < 1) {
 		printf("El numero de pruebas debe ser positivo.\n");
-		printf("Uso: ./NL_DES {-n numero de pruebas} [-o fichero salida]\n");
+		printf("Uso: ./3a {-n numero de pruebas} [-o fichero salida]\n");
 		return -1;
 	}
 
