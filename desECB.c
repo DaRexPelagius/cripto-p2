@@ -82,16 +82,15 @@ static const unsigned short S_BOXES[NUM_S_BOXES][ROWS_PER_SBOX][COLUMNS_PER_SBOX
 
 int main(int argc, char** argv) {
 
-	FILE *file_in = NULL, *file_out = NULL;
-	unsigned long tam_file, num_bloques, n_bloques = 0;
+	FILE *fentrada = NULL, *fsalida = NULL;
+	unsigned long lon, n_bloques, aux = 0;
 	unsigned short int padding;
-	unsigned int semilla;
 	uint8_t * clave = NULL;
-	int modo, i, j, entrada, salida;
+	int modo, i, j, entrada=0, salida;
 	char ficheroentrada[MAX_NOMBRE], ficherosalida[MAX_NOMBRE];
+	char texto_plano[MAX_TEXTO];
 
-	semilla = (unsigned int) time(NULL);
-	srand(semilla);
+
 
 	//Comprobamos que al menos el numero de args es el correcto
 	if ((argc != 2) && (argc != 4) && (argc != 6) && (argc != 8)) {
@@ -112,7 +111,7 @@ int main(int argc, char** argv) {
 	//Me estaba haciendo un lio con los punteros para la clave, la reserva de memoria
 	//no se porque, asique saque el bucle fuera de getArgs
 	for (i = 1; i < argc; i++) {
-		if ((strcmp(argv[i], "-C") == 0) || (strcmp(argv[i], "-c") == 0)) {
+		if (strcmp(argv[i], "-C") == 0) {
 
 			clave = (uint8_t*) malloc(TAM_CLAVE * sizeof(char));
 			generaClave(clave);
@@ -122,13 +121,13 @@ int main(int argc, char** argv) {
 				printf("%02X", clave[j]);
 			}
 			printf("\n");
-		} else if ((strcmp(argv[i], "-D") == 0) || (strcmp(argv[i], "-d") == 0)) {
+		} else if (strcmp(argv[i], "-D") == 0) {
 
 			i += 1;
-			if ((strcmp(argv[i], "-K") == 0) || (strcmp(argv[i], "-k") == 0)) {
+			if (strcmp(argv[i], "-k") == 0) {
 				i += 1;
 				if (strlen(argv[i]) != TAM_CLAVE * 2) {
-					printf("\nError, la clave no tiene la dimension correcta");
+					printf("\nClave no valida.");
 					return -1;
 				} else {
 					clave = (uint8_t*) malloc(
@@ -143,99 +142,102 @@ int main(int argc, char** argv) {
 		}
 	}
 	if (entrada) {
-		if ((file_in = fopen(ficheroentrada, "rb")) == NULL) {
+		if ((fentrada = fopen(ficheroentrada, "rb")) == NULL) {
 			fprintf(stderr, "Error al abrir el fichero: %s .\n",
 					ficheroentrada);
 			return -1;
 		}
 	} else
-		file_in = stdin;
+		fentrada = stdin;
 
 	if (salida) {
-		if ((file_out = fopen(ficherosalida, "wb")) == NULL) {
+		if ((fsalida = fopen(ficherosalida, "wb")) == NULL) {
 			fprintf(stderr, "Error al abrir el fichero: %s .\n", ficherosalida);
 			return -1;
 		}
 	} else
-		file_out = stdout;
-	printf("Entrada: %s Salida: %s", ficheroentrada, ficherosalida);
+		fsalida = stdout;
+	printf("Entrada: %s Salida: %s\n", ficheroentrada, ficherosalida);
 
+	//Preparamos la estructura auxiliar que hemos declarado para guardar
+	//la descomposicion de la clave a lo largo del DES
 	subclave* subclaves = (subclave*) malloc(17 * sizeof(subclave));
 	generaSubClavesDES(clave, subclaves);
 
-	uint8_t* in = (uint8_t*) malloc(8 * sizeof(char));
-	uint8_t* out = (uint8_t*) malloc(8 * sizeof(char));
+	//Preparamos memoria para los bloques con los que trabajaremos
+	uint8_t* bloque_entrada = (uint8_t*) malloc(8 * sizeof(int));
+	uint8_t* bloque_salida = (uint8_t*) malloc(8 * sizeof(int));
 
-	if (file_out == NULL) {
-		file_out = stdout;
-	}
-	if (file_in == NULL) {
+	if (!entrada) {
 
-		char texto_plano[1024];
 		printf(
-				"\nIntroduzca el texto a cifrar/descifrar (longitud max 1024):\n");
-		file_in = stdin;
+				"\nIntroduzca el texto con el que quiere trabaja r:(max long %d):\n", MAX_TEXTO);
+		fentrada = stdin;
 
-		while (fgets(texto_plano, 1024, file_in) != NULL) {
-			file_in = fopen("stdin", "wb");
-			fwrite(texto_plano, 1, strlen(texto_plano), file_in);
+		while (fgets(texto_plano, 1024, fentrada) != NULL) {
+			fentrada = fopen("stdin", "wb");//Abrimos un fichero 'stdin'
+			fwrite(texto_plano, 1, strlen(texto_plano), fentrada);//Metemos el texto en un fichero 'stdin'
 		}
 
-		fclose(file_in);
-		file_in = fopen("stdin", "rb");
+		fclose(fentrada);//Lo cerramos como escritura
+		fentrada = fopen("stdin", "rb");//Lo abrimos para lectura
 	}
 
-	fseek(file_in, 0L, SEEK_END);
-	tam_file = ftell(file_in);
-	fseek(file_in, 0L, SEEK_SET);
+	//Calculamos el tamanyo del archivo con fseek
+	//que nos permite ir al final del archivo
+	fseek(fentrada, 0L, SEEK_END);
+	//ftell nos dira el tamanyo
+	lon = ftell(fentrada);
+	//volvemos el puntero al inicio para poder trabajr con el fichero
+	fseek(fentrada, 0L, SEEK_SET);
 
-	num_bloques = tam_file / TAM_CLAVE + ((tam_file % TAM_CLAVE) ? 1 : 0);
+	n_bloques = lon / TAM_CLAVE + ((lon % TAM_CLAVE) ? 1 : 0);
 
-	while (fread(in, 1, 8, file_in)) {
-		n_bloques++;
-		if (n_bloques == num_bloques) {
-			if (modo == CIFRAR) {
-				padding = 8 - tam_file % 8;
-				if (padding < 8) {
-					memset((in + 8 - padding), (uint8_t) padding, padding);
+	//Hacemos un bucle que vaya cogiendo los bloques a los que aplicar DES
+	while (fread(bloque_entrada, 1, 8, fentrada)) {
+		aux++;//Llevamos la cuenta de cuantos bloques llevamos para tener en cuenta el padding
+		if (aux == n_bloques) {//En la ultima iteracion realizamos el padding como sea necesario
+			//Ciframos
+			if (modo == 1) {
+				padding = 8 - lon % 8;//Comprobamos cuantos bits nos falta para completar bloque
+				if (padding != 8) {
+					//Hacemos el padding
+					memset((bloque_entrada + 8 - padding), (uint8_t) padding,
+							padding);
 				}
-
-				DES(in, out, subclaves, modo);
-
-				fwrite(out, 1, 8, file_out);
+				//Aplicamos DES
+				DES(bloque_entrada, bloque_salida, subclaves, modo);
+				//Escribimos la salida en el fichero destino
+				fwrite(bloque_salida, 1, 8, fsalida);
 
 				//Si tiene un tam divisible entre 8 meto un bloque adicional para padding
 				if (padding == 8) {
-					memset(in, (uint8_t) padding, 8);
-					DES(in, out, subclaves, modo);
-					fwrite(out, 1, 8, file_out);
+					memset(bloque_entrada, (uint8_t) padding, 8);
+					DES(bloque_entrada, bloque_salida, subclaves, modo);
+					fwrite(bloque_salida, 1, 8, fsalida);
 				}
-			} else {
-				DES(in, out, subclaves, modo);
-				padding = out[7];
+			} else if(modo == 2) {//Desciframos
+				DES(bloque_entrada, bloque_salida, subclaves, modo);
+				padding = bloque_salida[7];
 
 				if (padding < 8) {
-					fwrite(out, 1, 8 - padding, file_out);
+					fwrite(bloque_salida, 1, 8 - padding, fsalida);
 				}
 			}
-		} else {
-			DES(in, out, subclaves, modo);
-			fwrite(out, 1, 8, file_out);
+		} else {//Si no estamos en el
+			DES(bloque_entrada, bloque_salida, subclaves, modo);
+			fwrite(bloque_salida, 1, 8, fsalida);
 		}
-		memset(out, 0, 8);
+		memset(bloque_salida, 0, 8);//Limpiamos el bloque de salida
 	}
-	free(clave);
-	free(subclaves);
-	free(in);
-	free(out);
-	if (file_in != stdin) {
-		fclose(file_in);
-	}
-	if (file_out != stdout) {
-		fclose(file_out);
-	} else {
-		printf("\n");
-	}
+
+	free(clave); free(subclaves);
+	free(bloque_entrada); free(bloque_salida);
+
+	if (entrada)
+		fclose(fentrada);
+	if (salida)
+		fclose(fsalida);
 
 	return 0;
 
@@ -243,10 +245,6 @@ int main(int argc, char** argv) {
 
 int getArgs(int nArgs, char** args, int* modo, char* ficheroentrada,
 		int* entrada, char* ficherosalida, int* salida) {
-
-	int i, j;
-	unsigned int u;
-	uint8_t * clave_aux = NULL;
 
 	if (getModo(nArgs, args, modo) != 1)
 		return -1;
@@ -313,80 +311,32 @@ int getModo(int nArgs, char** args, int* modo) {
 	return flag;
 }
 
-int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
+int getCadena(int nArgs, char** args, char* cadena, char* flag, int longitud) {
 
 	int i;
-	int flag = 0;
+	int aux = 0;
 
 	for (i = 1; i <= (nArgs - 2); i++)
-		if ((strncmp(args[i], modo, longitud) == 0)
+		if ((strncmp(args[i], flag, longitud) == 0)
 				&& (strlen(args[i]) == longitud)) {
-			if (flag)
+			if (aux)
 				return -1;
 			else {
 				strcpy(cadena, args[i + 1]);
-				flag = 1;
+				aux = 1;
 			}
 		}
-	return flag;
-}
-
-unsigned int pasarAHexa(char * c) {
-	return (unsigned int) *c;
-}
-
-int pasarABin(char * out, size_t len_out, const char *in, size_t n) {
-	size_t i;
-	int retval = 0;
-	int a, b, c;
-	if (len_out < 8 * n + 1) {
-		fprintf(stderr, "La salida no tiene el espacio suficiente");
-	}
-	while (n-- > 0 && len_out > 1) {
-		for (i = 0; len_out > 1 && i < 8; i++, len_out--) {
-			*out = (((unsigned int) *in) >> i) & 1;
-			out++;
-		}
-		in++;
-	}
-	if (len_out == 0) {
-		out--;/*Pisa el ultimo char escrito*/
-		retval = 1;
-	}
-	*out = '\0';
-	return retval;
-}
-
-char * readFileBin(char * filename, long * filelen) {
-
-	FILE *fileptr;
-	char *buffer;
-
-	fileptr = fopen(filename, "rb");
-	fseek(fileptr, 0, SEEK_END);
-	*filelen = ftell(fileptr);
-	rewind(fileptr);
-
-	buffer = (char *) malloc((*filelen + 1) * sizeof(char));
-	fread(buffer, *filelen, 1, fileptr);
-	fclose(fileptr);
-	return buffer;
-}
-
-void imprimeBinario(char input) {
-	int i;
-	for (i = 0; i < 8; i++) {
-		char shift_byte = 0x01 << (7 - i);
-		if (shift_byte & input) {
-			printf("1");
-		} else {
-			printf("0");
-		}
-	}
+	return aux;
 }
 
 void generaClave(uint8_t* clave) {
 	int i;
+	unsigned int aux;
+
+	//Preparamos la inicializacion de rand en esta ejecucion
+	aux = (unsigned int) time(NULL);
+	srand(aux);
+	//Creamos una clave con numeros hexadecimales aleatorios
 	for (i = 0; i < TAM_CLAVE; i++) {
 		clave[i] = rand() % 255;
 	}
@@ -497,13 +447,14 @@ void generaSubClavesDES(uint8_t* clave, subclave* subclaves) {
 	return;
 }
 
-void DES(uint8_t* in, uint8_t* out, subclave* subclaves, int modo) {
+void DES(uint8_t* bloque_entrada, uint8_t* bloque_salida, subclave* subclaves,
+		int modo) {
 	int i, k, orden_clave;
 	int desp;
 	uint8_t byte_desp, aux_ip[8], l[4], r[4], li[4], ri[4], er[6], sbox_er[4],
 			fila, col;
 	memset(aux_ip, 0, 8);
-	memset(out, 0, 8);
+	memset(bloque_salida, 0, 8);
 
 	for (i = 0; i < BITS_IN_IP; i++) {
 		/**
@@ -512,7 +463,7 @@ void DES(uint8_t* in, uint8_t* out, subclave* subclaves, int modo) {
 		 */
 		desp = IP[i];
 		byte_desp = 0x80 >> ((desp - 1) % 8);
-		byte_desp &= in[(desp - 1) / 8];
+		byte_desp &= bloque_entrada[(desp - 1) / 8];
 		byte_desp <<= ((desp - 1) % 8);
 
 		aux_ip[i / 8] |= (byte_desp >> i % 8);
@@ -538,7 +489,7 @@ void DES(uint8_t* in, uint8_t* out, subclave* subclaves, int modo) {
 			er[i / 8] |= (byte_desp >> i % 8);
 		}
 
-		if (modo == DESCIFRAR) {
+		if (modo == 2) {
 			orden_clave = 17 - k;
 		} else {
 			orden_clave = k;
@@ -671,7 +622,7 @@ void DES(uint8_t* in, uint8_t* out, subclave* subclaves, int modo) {
 		byte_desp = 0x80 >> ((desp - 1) % 8);
 		byte_desp &= aux_ip[(desp - 1) / 8];
 		byte_desp <<= ((desp - 1) % 8);
-		out[i / 8] |= (byte_desp >> i % 8);
+		bloque_salida[i / 8] |= (byte_desp >> i % 8);
 	}
 	return;
 

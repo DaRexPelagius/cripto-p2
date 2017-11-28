@@ -17,6 +17,7 @@
 #define ROWS_PER_SBOX 4
 #define COLUMNS_PER_SBOX 16
 #define MAX_NOMBRE 256
+#define MAX_TEXTO 256
 
 
 typedef struct {
@@ -33,10 +34,6 @@ int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud);
 void generaClave(uint8_t* clave);
 void generaSubClavesDES(uint8_t* clave, subclave* subclaves);
 void DES(uint8_t* in, uint8_t* out, subclave* subclaves, int modo);
-unsigned int pasarAHexa(char * c);
-int pasarABin(char * out, size_t len_out, const char *in, size_t n);
-char * readFileBin(char * filename, long * filelen);
-void imprimeBinario(char input);
 void generaClave(uint8_t* clave);
 void generaSubClavesDES(uint8_t* clave, subclave* subclaves);
 void DES(uint8_t* in, uint8_t* out, subclave* subclaves, int modo);
