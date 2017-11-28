@@ -2,10 +2,7 @@
 #include "desECB.h"
 
 
-/*--------------------------------------------------------------------------
-ecb
---------------------------------------------------------------------------*/
-/* PC1 "permutacionF_DES" */
+/* "permutacion" PC1 */
 static const unsigned short PC1[BITS_IN_PC1] = { 
 	57, 49, 41, 33, 25, 17, 9,
 	1, 58, 50, 42, 34, 26, 18,
@@ -17,7 +14,7 @@ static const unsigned short PC1[BITS_IN_PC1] = {
 	21, 13, 5, 28, 20, 12, 4
 };
 
-/* PC2 "permutacionF_DES" */
+/* "permutacion" PC2 */
 static const unsigned short PC2[BITS_IN_PC2] = {
 	14, 17, 11, 24, 1, 5,
 	3, 28, 15, 6, 21, 10,
@@ -29,17 +26,12 @@ static const unsigned short PC2[BITS_IN_PC2] = {
 	46, 42, 50, 36, 29, 32
 };
 
-/* Shifts in each of the clave halves in each round (for encryption) */
-static const unsigned short ROUND_SHIFTS[RONDAS] = {
+/* numero de bits que hay que rotar cada semiclave segun el numero de ronda */
+static const unsigned short ROUND_SHIFTS[ROUNDS] = {
 	1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
 };
 
-/* Shifts in each of the clave halves in each round (for decryption) */
-static const unsigned short ROUND_SHIFTS_DEC[RONDAS] = {
-	0, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1
-};
-
-/* IP permutacionF_DES */
+/* permutaciun IP */
 static const unsigned short IP[BITS_IN_IP] = {
 	58, 50, 42, 34, 26, 18, 10, 2,
 	60, 52, 44, 36, 28, 20, 12, 4,
@@ -51,7 +43,7 @@ static const unsigned short IP[BITS_IN_IP] = {
 	63, 55, 47, 39, 31, 23, 15, 7
 };
 
-/* IP inverse */
+/* inversa de IP */
 static const unsigned short IP_INV[BITS_IN_IP] = {
 	40, 8, 48, 16, 56, 24, 64, 32,
 	39, 7, 47, 15, 55, 23, 63, 31,
@@ -63,7 +55,7 @@ static const unsigned short IP_INV[BITS_IN_IP] = {
 	33, 1, 41, 9, 49, 17, 57, 25
 };
 
-/* E expansion */
+/* expansi�n E */
 static const unsigned short E[BITS_IN_E] = {
 	32, 1, 2, 3, 4, 5,
 	4, 5, 6, 7, 8, 9,
@@ -75,7 +67,7 @@ static const unsigned short E[BITS_IN_E] = {
 	28, 29, 30, 31, 32, 1
 };
 
-/* P permutacionF_DES */
+/* permutaciun P */
 static const unsigned short P[BITS_IN_P] = {
 	16, 7, 20, 21,
 	29, 12, 28, 17,
@@ -87,24 +79,12 @@ static const unsigned short P[BITS_IN_P] = {
 	22, 11, 4, 25
 };
 
-/* 32-bit swap */
-static const unsigned short SWAP[BITS_IN_SWAP] = {
-	33, 34, 35, 36, 37, 38, 39, 40,
-	41, 42, 43, 44, 45, 46, 47, 48,
-	49, 50, 51, 52, 53, 54, 55, 56,
-	57, 58, 59, 60, 61, 62, 63, 64,
-	1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 11, 12, 13, 14, 15, 16,
-	17, 18, 19, 20, 21, 22, 23, 24,
-	25, 26, 27, 28, 29, 30, 31, 32
-};
-
-/* S-boxes */
+/* cajas S */
 static const unsigned short S_BOXES[NUM_S_BOXES][ROWS_PER_SBOX][COLUMNS_PER_SBOX] = {
 	{	{ 14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7 },
 		{ 0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8 },
 		{ 4, 1, 14, 8, 13, 6, 2, 11, 15, 12, 9, 7, 3, 10, 5, 0 },
-		{ 15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13 } },
+		{ 15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13 } 	},
 	{
 		{ 15, 1, 8, 14, 6, 11, 3, 4, 9, 7, 2, 13, 12, 0, 5, 10 },
 		{ 3, 13, 4, 7, 15, 2, 8, 14, 12, 0, 1, 10, 6, 9, 11, 5 },
@@ -142,197 +122,197 @@ static const unsigned short S_BOXES[NUM_S_BOXES][ROWS_PER_SBOX][COLUMNS_PER_SBOX
 		{ 2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11 }	}
 };
 
-int main(int argc, char** argv) {
 
-	int flag, tamBloque = 64, entrada, salida;
-	int aux, lon;
-	char formatoEntrada, formatoSalida;
-	char clave[MAX_BUFFER];
-	char ficheroentrada[MAX_NOMBRE];
-	char ficherosalida[MAX_NOMBRE];
-	FILE* fentrada = NULL;
-	FILE* fsalida = NULL;
-	ECB ecb;
-	char textoplano[MAX_TEXTO];
-	char textocifrado[MAX_TEXTO];
 
-	//Comprobamos que los argumentos son los correctos
-	if ((argc != 6) && (argc != 8) && (argc != 10) && (argc != 12)){
-		printf("Número de argumentos incorrecto.\n");
-		printf("Uso del programa: ./desECB {-C|-D} {-if inputFormat} {-of outputFormat} [-k clave] [-i inputFile] [-o outputFile] .\n");	
+
+int main (int argc, char * argv[]){
+    
+    char * s;
+    FILE *fentrada = NULL, *fsalida=NULL;
+    unsigned long lon, num_bloques, n_bloques=0;
+    unsigned short int padding;
+    char ficherosalida[MAX_NOMBRE], ficheroentrada[MAX_NOMBRE];
+    unsigned int semilla;
+    uint8_t * clave=NULL;
+    int modo=-1,i,j;
+    int salida, entrada;
+        
+
+	printf("que pasa aqui");
+
+    semilla = (unsigned int)time(NULL);
+    srand (semilla);
+	printf("que pasa aqui");
+    
+    //Comprobamos que al menos el numero de args es el correcto
+	if ((argc != 2) && (argc != 4) && (argc != 6) && (argc != 8)) {
+		printf("Numero de argumentos incorrecto.\n");
+		printf("Uso: ./desECB {-C | -D -k clave} [-i fichero entrada] [-o fichero salida]\n");
 		return -1;
 	}
-	//Como en la practica anterior usamos una funcion auxiliar para conseguir los argumentos
-	if (getArgs(argc, argv, &flag, clave, &formatoEntrada, &formatoSalida, ficheroentrada, &entrada, ficherosalida, &salida) == -1) {
+	printf("Aqui no llegas"); 
+
+    //Cogemos los argumentos de entrada
+ 	if (getArgs(argc,argv,&modo, clave, ficheroentrada, &entrada, ficherosalida,&salida) == -1) {
 		printf("Argumentos incorrectos.\n");
-		printf("Uso del programa: ./desECB {-C|-D} {-if inputFormat} {-of outputFormat} [-k clave] [-i inputFile] [-o outputFile] .\n");
+		printf("Uso: ./desECB {-C | -D -k clave} [-i fichero entrada] [-o fichero salida]\n");
 		return -1;
 	}
-	
-	//Ahora vamos a comprar que los argumentos del DES sean correctos..
+	printf("Aqui no llegas"); 
+   	if(modo == 1) {                        
+            clave = (uint8_t*) malloc(TAM_CLAVE * sizeof(uint8_t));
+            generaClave(clave);
 
-	//Comprobamos que el archivo de entrada esta en un lenguaje que entendamos
-	if ((formatoEntrada != FORMATO_HEX) && (formatoEntrada != FORMATO_ASCII)) {
-		fprintf(stderr,"ERROR: Fomato de entrada incorrecto. 'h' para Hexadecimal y 'a' para Ascii.\n");
-		return -1;
-	}
-	//Comprobamos que el lenguaje de salida lo conocemos
-	if ((formatoSalida != FORMATO_HEX) && (formatoSalida != FORMATO_ASCII)) {
-		fprintf(stderr,"ERROR: Formao de salida incorrecto. 'h' para Hexadecimal y 'a' para Ascii.\n");
-		return -1;
-	}
-	
-	//Si se indico un fichero de entrada lo abrimos
+            printf("\nClave Hexadecimal: \n 0x");
+            for (j=0; j<TAM_CLAVE; j++) {
+                printf("%02X", clave[j]);
+            }
+            printf("\n");
+        }
+
+
 	if (entrada) {
-		if ((fentrada = fopen(ficheroentrada, "r")) == NULL) {
-			fprintf(stderr, "Error al abrir el fichero de entrada %s\n", ficheroentrada);
+		if ((fentrada = fopen(ficheroentrada, "rb")) == NULL) {
+			fprintf(stderr, "Error al abrir el fichero: %s .\n", ficheroentrada);
 			return -1;
 		}
-	} else fentrada = stdin;
-	//Si se indico un fichero de salida lo abrimos
+		
+	} else
+		fentrada = stdout;
+
 	if (salida) {
-		if ((fsalida = fopen(ficherosalida, "w")) == NULL) {
-			fprintf(stderr, "Error al abrir el fichero de salida %s\n", ficherosalida);
-			if (fentrada) fclose(fentrada);
+		if ((fsalida = fopen(ficherosalida, "wb")) == NULL) {
+			fprintf(stderr, "Error al abrir el fichero: %s .\n", ficherosalida);
 			return -1;
 		}
-	} else fsalida = stdout;
+	} else
+		fsalida = stdout;
+  
+    fseek(fentrada, 0L, SEEK_END);
+    lon = ftell(fentrada);
+    fseek(fentrada, 0L, SEEK_SET);
 
-	//Preparamos la estructura DES
-	if (flag == 1) aux = prepararECB(NULL, tamBloque, &ecb);
-	else aux = prepararECB(clave, tamBloque, &ecb);
+    subclave* subclaves = (subclave*)malloc(17*sizeof(subclave));
+    generaSubClavesDES(clave, subclaves);
+
+    uint8_t* in = (uint8_t*) malloc(8*sizeof(char));
+    uint8_t* out = (uint8_t*) malloc(8*sizeof(char));
+
+	  
 	
-	//Si nos da error cerramos los ficheros
-	if (aux != 0) {
-		if (fentrada) fclose(fentrada);
-		if (fsalida) fclose(fsalida);
+    if(fsalida==NULL){
+        fsalida=stdout;
+    }
+    if(fentrada==NULL){
+        printf("wolas\n");
+        char texto_plano[1024];
+        printf("\nIntroduzca el texto a cifrar/descifrar (longitud max 1024):\n");
+        fentrada=stdin;
+
+ 	while (fgets(texto_plano , 1024 , fentrada)!=NULL){
+		fentrada=fopen("stdin","wb");
+        	fwrite(texto_plano, 1, strlen(texto_plano), fentrada);
+	}
+        
+        fclose(fentrada);
+        fentrada=fopen("stdin","rb");      
+    }	
+			printf("Pollitas %d\n", modo);
+
+
+    
+    num_bloques = lon/TAM_CLAVE + ((lon%TAM_CLAVE)?1:0);
+    printf("El numero de bloques tras fseek %d\n", num_bloques);
+    
+    while(fread(in, 1, 8, fentrada)) {
+            n_bloques++;
+            if (n_bloques == num_bloques) {
+                if (modo == 1) {
+			printf("Pollitas\n");
+                        padding = 8 - lon%8;
+                        if (padding < 8) {
+                            memset((in + 8 - padding), (uint8_t)padding, padding);
+                        }
+
+                        DES(in, out, subclaves, modo);
+
+                        fwrite(out, 1, 8, fsalida);
+
+                        //Si tiene un tam divisible entre 8 meto un bloque adicional para padding
+                        if (padding == 8) {
+			printf("Pollitas\n");
+                            memset(in, (uint8_t)padding, 8);
+                            DES(in, out, subclaves, modo);
+                            fwrite(out, 1, 8, fsalida);
+                        }
+                } else {
+                        DES(in, out, subclaves, modo);
+                        padding = out[7];
+
+                        if (padding < 8) {
+                            fwrite(out, 1, 8 - padding, fsalida);
+                        }
+                }
+            } else {
+                DES(in, out, subclaves, modo);
+                fwrite(out, 1, 8, fsalida);
+            }
+            memset(out, 0, 8);
+    }
+    free(clave);
+    free(subclaves);
+    free(in);
+    free(out);
+    if(fentrada!=stdin){
+        fclose(fentrada);
+    }
+    if(fsalida!=stdout){
+        fclose(fsalida);
+    }else{
+        printf("\n");
+    }
+    
+    
+
+    return 0;
+
+    
+}
+
+
+/*--------------------------------------------------------------------------
+ Obtiene los argumentos
+ - Entrada:
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Flag con el modo
+	 * Puntero al fichero de salida
+	 * Fichero de salida
+ - Salida:
+	 * -1 si ocurre algun error
+	 * 0 si va bien
+ --------------------------------------------------------------------------*/
+
+int getArgs(int nArgs, char** args, int* modo,uint8_t* clave, char* ficheroentrada,
+		int* entrada, char* ficherosalida,
+		int* salida) {
+
+	if (getModo(nArgs, args, modo) != 1)
 		return -1;
+
+	if (modo == 2) {
+		getClave(nArgs, args, clave);
 	}
 
-	//Imprimimos la clave de Encriptacion 
-	if (flag == 1) imprimirClave(stdout, &(ecb.clave));
+	if (((*entrada) = getCadena(nArgs, args, ficheroentrada, "-i", 2)) != 1)
+		return -1;
 
-	//Si el programa se ejecuto como encriptacion, encriptamos
-	if (flag == 1) {
-		if (!entrada) fprintf(stdout, "Texto plano:\n");
-		lon = leerEntrada(fentrada, formatoEntrada, textoplano, MAX_TEXTO);
-		padding(textoplano, &lon, tamBloque, PADDING_CHAR);
-		modoECB(flag, textoplano, textocifrado, lon, &ecb);
-		if (!salida) fprintf(stdout, "Texto cifrado:\n");
-		imprimirSalida(fsalida, formatoSalida, textocifrado, lon);
-	}
-	//Si el programa se ejecuto como desencriptacion, desencriptamos
-	else if (flag == 2) {
-		if (!entrada) fprintf(stdout,"textocifrado:\n");
-		lon = leerEntrada(fentrada, formatoEntrada, textocifrado, MAX_TEXTO);
-		modoECB(flag, textoplano, textocifrado, lon, &ecb);
-		if (!salida) fprintf(stdout, "textoplano:\n");
-		imprimirSalida(fsalida, formatoSalida, textoplano, lon);
-	}
-
-	if (fentrada) fclose(fentrada);
-	if (fsalida) fclose(fsalida);
+	if (((*salida) = getCadena(nArgs, args, ficherosalida, "-o", 2)) != 1)
+		return -1;
 
 	return 0;
 }
-/*--------------------------------------------------------------------------
-Obtiene los argumentos
-- Entrada:
-	* Número de argumentos
-	* Array de argumentos
-	* Flag indicando si se cifra o descifra
-	* Clave
-	* Formato de entrada
-	* Formato de salida
-	* Nombre del fichero de entrada
-	* Puntero indicando si hay fichero de entrada
-	* Nombre del fichero de salida
-	* Puntero indicando si hay fichero de salida
-- Salida:
-	* -1 si ocurre algun error
-	* 0 si va bien
---------------------------------------------------------------------------*/
-int getArgs(int nArgs, char** args, int* modo, char* clave, char* formatoEntrada, char* formatoSalida, char* ficheroentrada, int* entrada, char* ficherosalida, int* salida) {
 
-	if (getModo(nArgs, args, modo) != 1) return -1;
-	if ((*modo) == 2) if (getCadena(nArgs, args, clave, "-k", 2) != 1) return -1;//La clave es necesaria solo para desencriptar
-	else (getCadena(nArgs, args, clave, "-k", 2);
-	if (getFormato(nArgs, args, formatoEntrada, "-if", 3) != 1) return -1;
-	if (getFormato(nArgs, args, formatoSalida, "-of", 3) != 1) return -1;
-
-	if (((*entrada) = getCadena(nArgs, args, ficheroentrada, "-i", 2)) == -1) return -1;
-	if (((*salida) = getCadena(nArgs, args, ficherosalida, "-o", 2)) == -1) return -1;
-
-	return 0;
-}
-/*--------------------------------------------------------------------------
-Obtiene un entero
-- Entrada:
-	* Número de argumentos
-	* Array de argumentos
-	* Puntero al entero
-	* Puntero al modo
-	* Longitud de la cadena
-- Salida:
-	* -1 si ocurre algun error
-	* 1 si va bien
---------------------------------------------------------------------------*/
-int getEntero(int nArgs, char** args, int* entero, char* modo, int longitud) {
-
-	int i;
-	int flag = 0;
-
-	for (i=1; i <= (nArgs - 2); i++){
-				
-		if ((strncmp(args[i], modo, longitud) == 0) && (strlen(args[i]) == longitud)) {
-			if (flag) return -1;
-			else {
-				*entero = atoi(args[i+1]);
-				if ((*entero == 0) && !isdigit(args[i + 1][0])) return -1;
-				flag = 1;
-			}
-		}}
-
-	return flag;
-}
-/*--------------------------------------------------------------------------
-Obtiene una cadena
-- Entrada:
-	* Número de argumentos
-	* Array de argumentos
-	* Puntero a la cadena
-	* Puntero al modo
-	* Longitud de la cadena
-- Salida:
-	* -1 si ocurre algun error
-	* 1 si va bien
---------------------------------------------------------------------------*/
-int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
-
-	int i;
-	int flag = 0;
-
-	for (i = 1; i <= (nArgs - 2); i++)
-		if ((strncmp(args[i], modo, longitud) == 0) && (strlen(args[i]) == longitud)) {
-			if (flag)
-				return -1;
-			else {
-				strcpy(cadena, args[i+1]);
-				flag = 1;
-			}
-		}
-	return flag;
-}
-/*--------------------------------------------------------------------------
-Obtiene el modo
-- Entrada:
-	* Número de argumentos
-	* Array de argumentos
-	* Puntero al modo
-- Salida:
-	* -1 si ocurre algun error
-	* 1 si va bien
---------------------------------------------------------------------------*/
 int getModo(int nArgs, char** args, int* modo) {
 
 	int i;
@@ -356,768 +336,769 @@ int getModo(int nArgs, char** args, int* modo) {
 	}
 	return flag;
 }
-/*--------------------------------------------------------------------------
-Obtiene el formato
-- Entrada:
-	* Número de argumentos
-	* Array de argumentos
-	* Formato
-	* Modo
-	* Longitud del parametro
-- Salida:
-	* -1 si ocurre algun error
-	* 0 si va bien
---------------------------------------------------------------------------*/
-int getFormato(int nArgs, char** args, char* formato, char* modo, int lonParam) {
 
-	int i;
-	int aux = 0;
-
-	for (i = 1; i <= nArgs - 2; i++){
-		if ((strncmp(args[i], modo, lonParam) == 0) && (strlen(args[i]) == lonParam)) {
-			if (aux) return -1;
-			else {
-				if ((strlen(args[i + 1]) == 1) && (args[i + 1][0] == FORMATO_HEX)) {
-					*formato = FORMATO_HEX;
-					aux = 1;
-				} else if ((strlen(args[i + 1]) == 1) && (args[i + 1][0] == FORMATO_BIN)) {
-					*formato = FORMATO_BIN;
-					aux = 1;
-				} else if ((strlen(args[i + 1]) == 1) && (args[i + 1][0] == FORMATO_ASCII)) {
-					*formato = FORMATO_ASCII;
-					aux = 1;
-				} else return -1;
-			}
-		}
-	}
-	return aux;
-}
-/*--------------------------------------------------------------------------
-Imprime la salida
-- Entrada:
-	* Fichero donde imprimir
-	* Texto a imprimir
-	* Formato
-	* Longitud
---------------------------------------------------------------------------*/
-void imprimirSalida(FILE* fsalida, char formato, char* texto, int lon) {
-
-	int i;
-	char hex[2];
-	//Si el formato es ASCII imprimimos tal cual
-	if (formato == FORMATO_ASCII) for (i = 0; i < lon; i++) fputc(texto[i], fsalida);
-	else if (formato == FORMATO_HEX) {//Sino transformamos los chars a digitos hexagonales
-		for (i = 0; i < lon; i++) {
-			char2Hex(hex, texto[i]);
-			fputc(hex[0], fsalida);
-			fputc(hex[1], fsalida);
-		}
-	}
-
-	fputc('\n', fsalida);
-}
-/*--------------------------------------------------------------------------
-Realiza el padding
-- Entrada:
-	* Texto
-	* Longitud
-	* Numero que queremos que la longitud sea múltiplo de
-	* Caracter con el que realizar el padding
---------------------------------------------------------------------------*/
-void padding(char* texto, int* lon, int numero, char padChar) {
-	while ((*lon) * 8 % numero != 0) texto[(*lon)++] = padChar;
-}
-
-/*--------------------------------------------------------------------------
-Prepara el ECB, inicializando y comprobando la validez de la clave
-- Entrada:
-	* Clave
-	* Tamaño del bloque
-	* Puntero a la estructura de ECB
-- Salida:
-	* -1 si ocurre algun error
-	* 0 si va bien
---------------------------------------------------------------------------*/
-int prepararECB(char* clave, int tamBloque, ECB* ecb) {
-
-	//Inicializamos la clave y comprobamos que es valida
-	if (clave) {
-		if (hex2Bloque(&(ecb->clave), clave, TAM_CLAVE) == -1){
-			fprintf(stderr,"ERROR: Error en el formato de la clave.\n");
-			return -1;
-		}else if (!esValida(&(ecb->clave))){
-			fprintf(stderr,"ERROR: Clave no valida.\n");
-			return -1;
-		}
-	} else {//Inicializamos una clave aleatoria
-		srand(time(NULL));
-		newClave(&(ecb->clave));
-	}
-
-	//Guardamos el tamanyo de bloque
-	ecb->tamBloque = tamBloque;
-
-	return 0;
-}
-/*--------------------------------------------------------------------------
-Imprime la clave
-- Entrada:
-	* Fichero de salida
-	* Clave a imprimir
---------------------------------------------------------------------------*/
-void imprimirClave(FILE* fsalida, Bloque* clave) {
-	imprimirBloqueHexadecimal(fsalida, clave, TAM_CLAVE, "Clave = ");
-}
-
-/*--------------------------------------------------------------------------
-Leer la entrada
-- Entrada:
-	* Fichero de entrada
-	* Formato
-	* Texto a leer
-	* Maxima longitud
-- Salida:
-	* Longitud n
---------------------------------------------------------------------------*/
-int leerEntrada(FILE* fentrada, char formato, char* texto, int maxLon) {
-
-	char c;
-	uint8_t auxC;
-	char hex[2];
-	int n = 0;
-	
-	//Si el formato de entrada es ASCII leemos tal cual
-	if (formato == FORMATO_ASCII){
-		while (((c = fgetc(fentrada)) != EOF) && (fentrada != stdin || c != '\n') && (n < maxLon)) {
-			texto[n] = c;
-			n++;
-		}
-	} else if (formato == FORMATO_HEX){
-		while (1) {
-			//Como un char es un byte, al estar en hexadecimal necesitamos
-			//dos char, leemos el primero
-			hex[0] = fgetc(fentrada);
-			while (!comprobarHex(hex[0])) {//Comprobamos que la entrada es hexadecimal
-				//Comprobamos si ha acabado la entrada, EOF si leemos de un fichero, \n de consola
-				if ((hex[0] == EOF) || ((fentrada == stdin) && (hex[0] == '\n'))) return n;
-				hex[0] = fgetc(fentrada);
-			}
-
-			//Cuando encontremos el primer digito hex, leemos su segundo byte
-			hex[1] = fgetc(fentrada);
-			while (!comprobarHex(hex[1])) {
-				//Comprobamos si ha acabado la entrada, EOF si leemos de un fichero, \n de consola
-				//Si acaba el fichero tenemos que completar(padding) el digito hexadecimal
-				if ((hex[1] == EOF) || ((fentrada == stdin) && (hex[1] == '\n'))) {
-					hex[1] = '0';
-					hex2Char(&auxC, hex);
-					texto[n] = auxC;
-					n++;
-					return n;
-				}
-				hex[1] = fgetc(fentrada);
-			}
-
-			//Traducimos el digito hexadecimal
-			hex2Char(&auxC,hex);
-			texto[n] = auxC;
-			n++;
-		}
-	}
-	return n;
-}
-
-/*--------------------------------------------------------------------------
-Realiza el cifrado o descifrado siguiendo el metodo ECB
-- Entrada:
-	* Modo (cifrado/descifrado)
-	* Texto plano
-	* Texto cifrado
-	* Longitud
-	* Puntero a la estructura ECB
---------------------------------------------------------------------------*/
-void modoECB(int modo, char* textoplano, char* textocifrado, int lon, ECB* ecb) {
-	
-	Bloque bloqueTextoPlano, bloqueTextoCifrado;
-	int i;
-	int tam = ecb->tamBloque; 
-	int nBloques = lon * 8 / tam;
-
-	//Segun el modo procedemos a cifrar o descifrar
-	//Cabe decir que ciframos sobre los bits asi que tenemos que pasar
-	//el texto a binario
-	if (modo == 1) {
-		for (i = 0; i < nBloques; i++) {
-			texto2Bloque(&bloqueTextoPlano, textoplano + i * tam / 8, tam);
-			fECB(modo, &bloqueTextoPlano, &bloqueTextoCifrado, ecb);
-			bloque2Texto(textocifrado + i * tam / 8, &bloqueTextoCifrado, tam);
-		}
-	} else {
-		for (i=0; i < nBloques; i++) {
-			texto2Bloque(&bloqueTextoCifrado, textocifrado + i * tam / 8, tam);
-			fECB(modo, &bloqueTextoPlano, &bloqueTextoCifrado, ecb);
-			bloque2Texto(textoplano + i * tam / 8, &bloqueTextoPlano, tam);
-		}
-	}
-}
-/*--------------------------------------------------------------------------
-Cambia un caracter a un hexadecimal
-- Entrada:
-	* Hexadicimal
-	* Caracter
---------------------------------------------------------------------------*/
-void char2Hex(char* hex, uint8_t c) {
-
-	uint8_t bin[8];
-
-	char2Bin(bin,c);
-	bin2Hex(hex,bin);
-	bin2Hex(hex+1,bin+4);
-}
-/*--------------------------------------------------------------------------
-Cambia un hexadecimal a un bloque
-- Entrada:
-	* Puntero al Bloque
-	* Cadena
-	* Longitud
-- Salida:
-	* -1 si ocurre algun error
-	* 0 si va bien
---------------------------------------------------------------------------*/
-int hex2Bloque(Bloque* resultado, char* string, int length) {
-
-	int i;
-	
-	if (strlen(string) != (length/4 + 2)) return -1;
-
-	if ((string[0] != '0') || (string[1] != 'x')) return -1;
-
-	for (i = 0; i < length / 4; i++) {
-		if (!comprobarHex(string[i + 2])) return -1;
-		hex2Bin(&(resultado->bloque[4 * i + 1]),string[i + 2]);
-	}
-
-	return 0;
-}
-/*--------------------------------------------------------------------------
-Comprueba si una clave es valida
-- Entrada:
-	* Clave
-- Salida:
-	* 1 si la clave es valida
-	* 0 si no
---------------------------------------------------------------------------*/
-int esValida(Bloque* clave) {
-
-	int byte, bit;
-	int acc;
-
-	for (byte = 0; byte < TAM_CLAVE / 8; byte++) {
-		acc = 0;
-		for (bit = 0; bit < 8; bit++) acc += clave->bloque[8 * byte + bit + 1];
-		if (acc % 2 == 0) return 0;
-	}
-
-	return 1;
-}
-/*--------------------------------------------------------------------------
-Genera una nueva clave
-- Entrada:
-	* Clave a generar
---------------------------------------------------------------------------*/
-void newClave(Bloque* clave) {
-
-	int byte, bit;
-	int acc;
-
-	for (byte = 0; byte < (TAM_CLAVE / 8); byte++) {
-		acc = 0;
-		for (bit = 0; bit < 7; bit++) acc += (clave->bloque[8 * byte + bit + 1] = naleatorio(0,1));
-		clave->bloque[8 * byte + 7 + 1] = (acc % 2 == 0);
-	}
-}
-/*--------------------------------------------------------------------------
-Genera un numero aleatorio en el intervalo (a,b)
-- Entrada:
-	* Intervalo (a,b)
-- Salida:
-	* Numero generado
---------------------------------------------------------------------------*/
-int naleatorio(int a, int b) {
-
-	if (a >= b) return a;
-
-	return a + (rand() % (b - a + 1));
-}
-/*--------------------------------------------------------------------------
-Imprime un bloque
-- Entrada:
-	* Fichero de salida
-	* Bloque
-	* Tamaño del bloque
-	* Texto
---------------------------------------------------------------------------*/
-void imprimirBloqueHexadecimal(FILE* fsalida, Bloque* b, int tamBloque, char* texto) {
-
-	char c;
+void getClave(int nArgs, char** args, uint8_t* clave){
+	printf("Aqui no llegas"); 
+       clave = (uint8_t*) malloc(TAM_CLAVE*sizeof(uint8_t));
+	printf("Aqui no llegas"); 
+       unsigned int u;
 	int i, j;
-	uint8_t binBuffer[4];
 
-	//Si existe texto de salida lo imprimimos
-	if (texto) fprintf(fsalida, "%s", texto);
-	//Sino imprimimos 0
-	fprintf(fsalida,"%s","0x");
-	
-	//Imprimimos el bloque hexadecimal
-	for (i = 0; i < tamBloque / 4; i++) {
-		for (j = 0; j < 4; j++) binBuffer[j] = b->bloque[i * 4 + j + 1];
-		bin2Hex(&c, binBuffer);
-		fputc(c, fsalida);
-	}
-	fputc('\n', fsalida);//Terminamos con un /n para que no nos quede feo
+       for (i = 1; i < nArgs; i++){
+		if ((strncmp(args[i], "-k",2)==0) && (strlen(args[i]) == 2)){
+		       for (j=0;j<TAM_CLAVE*2;j+=2){
+			       sscanf(args[i] + j, "%02X", &u);
+			       clave[j/2]=u;
+		      }
+		      break;
+		}
+	}        
 }
+
 /*--------------------------------------------------------------------------
-Comprueba si un caracter es hexadecimal
-- Entrada:
-	* Caracter
-- Salida:
-	* 1 si es hexadecimal
-	* 0 si no
---------------------------------------------------------------------------*/
-int comprobarHex(char hex) {
-	//Miramos que solo tiene numeros del 0-9 o letras A-F como tiene que ser en hexadecimal
-	if (((hex >= '0') && (hex <= '9')) || ((hex >= 'A') && (hex <= 'F')) || ((hex >= 'a') && (hex <= 'f')))	return 1;
-
-	return 0;
-}
-/*--------------------------------------------------------------------------
-Paso de hexadecimal a caracter
-- Entrada:
-	* Caracter c
-	* Hexadecimal
---------------------------------------------------------------------------*/
-void hex2Char(uint8_t* c, char* hex) {
-
-	//Hex tiene dos posiciones hex[0] y hex[1]
-	//Siendo hex[0] los bits mas significativos
-	if ((hex[1] >= '0') && (hex[1] <= '9'))	(*c) = hex[1] - '0';
-	else if ((hex[1] >= 'A') && (hex[1] <= 'F')) (*c) = hex[1] + 10 - 'A'; //Ej: B-A = 1, 1+10=11=0Bx
-	else if ((hex[1] >= 'a') && (hex[1] <= 'f')) (*c) = hex[1] + 10 - 'a';
-
-	//Repetimos operacion con los bits mas significativos
-	if ((hex[0] >= '0') && (hex[0] <= '9'))	(*c) += 16*(hex[0] - '0');
-	else if ((hex[0] >= 'A') && (hex[0] <= 'F')) (*c) += 16*(hex[0] + 10 - 'A');
-	else if ((hex[0] >= 'a') && (hex[0] <= 'f')) (*c) += 16*(hex[0] + 10 - 'a');
-
-}
-/*--------------------------------------------------------------------------
-Paso de texto a bloque
-- Entrada:
-	* Bloque b
-	* Texto
-	* Tamaño del bloque
---------------------------------------------------------------------------*/
-void texto2Bloque(Bloque* b, char* texto, int tamBloque) {
+ Obtiene una cadena
+ - Entrada:
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Puntero a la cadena
+	 * Puntero al modo
+	 * Longitud de la cadena
+ - Salida:
+	 * -1 si ocurre algun error
+	 * 1 si va bien
+ --------------------------------------------------------------------------*/
+int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud) {
 
 	int i;
-	int nBytes = tamBloque / 8;
+	int flag = 0;
 
-	for (i = 0; i < nBytes ; i++) char2Bin(b->bloque + i * 8 + 1, texto[i]);
-}
-/*--------------------------------------------------------------------------
-Funcion que aplica ECB, como ECB es la aplicacion directa de DES, simplemente llamamos a DES
-- Entrada:
-	* Texto plano
-	* Texto cifrado
-	* Puntero a la estructura ECB
-	* Flag
---------------------------------------------------------------------------*/
-void fECB(int flag, Bloque* bloqueTextoPlano, Bloque* bloqueTextoCifrado, ECB* ecb) {
-
-	//Aplicamos DES
-	DES(bloqueTextoCifrado, bloqueTextoPlano, &(ecb->clave), 1);
-
-}
-/*--------------------------------------------------------------------------
-Realiza la operación del DES de acuerdo al esquema visto en la teoria
-- Entrada:
-	* Entrada
-	* Resultado
-	* Modo
-	* Clave
---------------------------------------------------------------------------*/
-void DES(Bloque* resultado, Bloque* entrada, Bloque* clave, int modo) {
-
-	Bloque izqEntrada, derEntrada, izqSalida, derSalida;
-	Bloque bloquePermIni, bloqueTrasRondas, bloqueTrasSwap;
-	Bloque claveEntrada, claveSalida, claveRonda;
-	int i;
-
-	//Permutamos la primera vez(Izq a Der y viceversa)
-	permArranque(&bloquePermIni, entrada);
-
-	//Dividimos en dos el bloque
-	getMitadIzq(&izqEntrada, &bloquePermIni);
-	getMitadDer(&derEntrada, &bloquePermIni);
-
-	//Realizamos la primera permutacion del esquema a la clave. PC1
-	permutacionClave1(&claveEntrada, clave);
-
-	//Procedemos ahora con las 16 rondas de DES
-	for (i = 1; i<= RONDAS; i++) {
-
-		LCS(&claveSalida, &claveEntrada, i, modo);//Left Circular Shift
-		permutacionClave2(&claveRonda, &claveSalida);
-
-		rondaDES(&izqSalida, &derSalida, &izqEntrada, &derEntrada, &claveRonda);
-
-		copiarBloque(&izqEntrada, &izqSalida, BITS_IN_FEISTEL/2);
-		copiarBloque(&derEntrada, &derSalida, BITS_IN_FEISTEL/2);
-		copiarBloque(&claveEntrada, &claveSalida, BITS_IN_PC1);
-	}
-
-	//Unimos los bloques
-	unirBloques(&bloqueTrasRondas, &izqEntrada, &derEntrada);
-
-	//Swap final de DES(32 bitd)
-	swap(&bloqueTrasSwap, &bloqueTrasRondas);
-
-	//IP^⁽⁻¹⁾
-	invPermArranque(resultado, &bloqueTrasSwap);
-}
-/*--------------------------------------------------------------------------
-Realiza un desplazamiento circular a la izquierda
-- Entrada:
-	* Resultado
-	* Entrada
-	* Numero de ronda
-	* Modo
---------------------------------------------------------------------------*/
-void LCS(Bloque* resultado, Bloque* entrada, int nRonda, int modo) {
-
-	if (modo == 1) shiftLeftDES(resultado, entrada, ROUND_SHIFTS[nRonda - 1]);
-	else if (modo == 2) shiftRightDES(resultado, entrada, ROUND_SHIFTS_DEC[nRonda - 1]);
-}
-/*--------------------------------------------------------------------------
-Realiza en desplazamiento a la izquierda en DES (Li)
-- Entrada:
-	* Resultado
-	* Entrada
-	* Cambio
---------------------------------------------------------------------------*/
-void shiftLeftDES(Bloque* resultado, Bloque* entrada, int cambio) {
-
-	int i;
-
-	for (i = 0; i < BITS_MEDIOBLOQUE; i++) 
-		resultado->bloque[i + 1] = entrada->bloque[((i + cambio) % (BITS_MEDIOBLOQUE)) + 1];
-	for (i=0; i < BITS_MEDIOBLOQUE; i++) resultado->bloque[i + BITS_MEDIOBLOQUE + 1] = entrada->bloque[((i + cambio) % (BITS_MEDIOBLOQUE)) 
-												+ BITS_MEDIOBLOQUE + 1];
-}
-/*--------------------------------------------------------------------------
-Realiza en desplazamiento a la derecha en DES (Di)
-- Entrada:
-	* Resultado
-	* Entrada
-	* Cambio
---------------------------------------------------------------------------*/
-void shiftRightDES(Bloque* resultado, Bloque* entrada, int cambio) {
-
-	int i;
-
-	for (i = 0; i < BITS_MEDIOBLOQUE; i++)
-		resultado->bloque[i+1] = entrada->bloque[((i - cambio + BITS_MEDIOBLOQUE) % (BITS_MEDIOBLOQUE)) + 1];
-	for (i=0; i < BITS_MEDIOBLOQUE; i++) 
-		resultado->bloque[i + BITS_MEDIOBLOQUE + 1] = entrada->bloque[((i - cambio + BITS_MEDIOBLOQUE) % (BITS_MEDIOBLOQUE)) 
-								+ BITS_MEDIOBLOQUE + 1];
-}
-/*--------------------------------------------------------------------------
-Permutacion con los valores que nos dan en el enunciado
-- Entrada:
-	* Resultado
-	* Entrada
---------------------------------------------------------------------------*/
-void permArranque(Bloque* resultado, Bloque* entrada) {
-	permutacion(resultado, entrada, IP, BITS_IN_IP);
-}
-
-/*--------------------------------------------------------------------------
-Permuta los valores del bloque
-- Entrada:
-	* Resultado
-	* Entrada
-	* Indices
-	* Longitud
---------------------------------------------------------------------------*/
-void permutacion(Bloque* resultado, Bloque* entrada, const unsigned short* indices, int lon) {
-
-	int i;
-
-	for (i = 1; i <= lon; i++) resultado->bloque[i] = entrada->bloque[indices[i - 1]];
-}
-/*--------------------------------------------------------------------------
-Cambio de bloque a texto
-- Entrada:
-	* Texto
-	* Bloque b
-	* Tamaño del bloque
---------------------------------------------------------------------------*/
-void bloque2Texto(char* texto, Bloque* b, int tamBloque) {
-
-	int i;
-	int nBytes = tamBloque / 8;
-
-	for (i=0; i < nBytes; i++) bin2Char(((uint8_t*) texto) + i, b->bloque + 8 * i + 1);
-}
-/*--------------------------------------------------------------------------
-Cambio de char a binario
-- Entrada:
-	* Numero binario
-	* Caracter
---------------------------------------------------------------------------*/
-void char2Bin(uint8_t* bin, uint8_t c) {
-
-	int i;
-	
-	//El paso a binario es sencillo
-	for (i = 7; i >= 0; i--) {
-		bin[i] = c % 2;
-		c = c / 2;
-	}
-}
-/*--------------------------------------------------------------------------
-Cambio de binario a hexadecimal
-- Entrada:
-	* Caracter
-	* Hexadecimal
---------------------------------------------------------------------------*/
-void bin2Hex(char* c, uint8_t* bin) {
-
-	int i;
-	int valor = 0;
-	int potencia = 1;//2 elevado a |i-3|
-
-	for (i = 3; i >= 0; i--) {
-		valor += potencia * bin[i];
-		potencia *= 2;
-	}
-	//Acabamos con un padding
-	if (valor < 10)	(*c) = '0' + valor;
-	else (*c) = 'A' + valor - 10;
-}
-/*--------------------------------------------------------------------------
-Cambio de hexadecimal a binario
-- Entrada:
-	* Caracter
-	* Hexadecimal
---------------------------------------------------------------------------*/
-void hex2Bin(uint8_t* bin, char hex) {
-
-	int i, valorDecimal = 0;
-
-	if ((hex >= '0') && (hex <= '9')) valorDecimal = hex - '0';
-	else if ((hex >= 'A') && (hex <= 'Z')) valorDecimal = hex + 10 - 'A';
-	else if ((hex >= 'a') && (hex <= 'z')) valorDecimal = hex + 10 - 'a';
-
-	for (i = 3; i >= 0; i--) {
-		bin[i] = valorDecimal % 2;
-		valorDecimal = valorDecimal / 2;
-	}
-}
-/*--------------------------------------------------------------------------
-Realiza el xor del DES
-- Entrada:
-	* Resultado
-	* Entrada 1
-	* Entrada 2
-	* Longitud
---------------------------------------------------------------------------*/
-void xorDES(Bloque* resultado, Bloque* entrada1, Bloque* entrada2, int length) {
-
-	int i;
-
-	for (i = 1; i <= length; i++) 
-		resultado->bloque[i] = (entrada1->bloque[i] != entrada2->bloque[i]);
-}
-/*--------------------------------------------------------------------------
-Cambio de binario a char
-- Entrada:
-	* Caracter
-	* Binario
---------------------------------------------------------------------------*/
-void bin2Char(uint8_t* c, uint8_t* bin) {
-
-	int i;
-	int pow = 1;
-
-	(*c) = 0;
-
-	for (i = 7; i >= 0; i--) {
-		(*c) += pow * bin[i];
-		pow *= 2;
-	}
-}
-/*--------------------------------------------------------------------------
-Funcion que selecciona la mitad de la izquierda de un bloque
-- Entrada:
-	* Bloque de entrada
-	* Bloque con la mitad de la izquierda
---------------------------------------------------------------------------*/
-void getMitadIzq(Bloque* resultado, Bloque* entrada) {
-
-	int i;
-	//Cogemos los 32 primeros bits(1-32), recordamos que en bloque->bloque[0] no hay nada util
-	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++) resultado->bloque[i] = entrada->bloque[i];
-}
-/*--------------------------------------------------------------------------
-Funcion que selecciona la mitad de la derecha de un bloque
-- Entrada:
-	* Bloque de entrada
-	* Bloque con la mitad de la derecha
---------------------------------------------------------------------------*/
-void getMitadDer(Bloque* resultado, Bloque* entrada) {
-
-	int i;
-
-	//Cogemos los 32 ultimos bits(33-64), recordamos que en bloque->bloque[0] no hay nada util
-	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++) resultado->bloque[i] = entrada->bloque[i + BITS_IN_FEISTEL / 2];
-}
-/*--------------------------------------------------------------------------
-Funcion que realiza el PC1 del DES
-- Entrada:
-	* Bloque de entrada
-	* Bloque con el resultado
---------------------------------------------------------------------------*/
-void permutacionClave1(Bloque* resultado, Bloque* entrada) {
-	permutacion(resultado, entrada, PC1, BITS_IN_PC1);
-}
-/*--------------------------------------------------------------------------
-Funcion que realiza el PC2 del DES
-- Entrada:
-	* Bloque de entrada
-	* Bloque con el resultado
---------------------------------------------------------------------------*/
-void permutacionClave2(Bloque* resultado, Bloque* entrada) {
-	permutacion(resultado, entrada, PC2, BITS_IN_PC2);
-}
-
-/*--------------------------------------------------------------------------
-Funcion encargada de realizar la logica de cada ronda del DES:
-	-L(i) = R(i-1)
-	-R(i) = L(i-1) + F(R(i-1), k(i))
-- Entrada:
-	* Bloque de entrada parte izquierda (L(i-1))
-	* Bloque de entrada parte derecha (R(i-1))
-	* Bloque de salida parte izquierda (L(i))
-	* Bloque de salida parte derecha (R(i))
-	* Clave
---------------------------------------------------------------------------*/
-void rondaDES(Bloque* izqSalida, Bloque* derSalida, Bloque* izqEntrada, Bloque* derEntrada, Bloque* clave) {
-
-	Bloque eBlock, xBlock, bloqueTrasSBOX, pBlock;
-
-	//Aplicamos la funcion F de DES
-	expansion(&eBlock, derEntrada); //La mitad derecha la preparamos para sumar con la clave, 48bits
-	xorDES(&xBlock, &eBlock, clave, BITS_IN_E); //Hacemos xor de esa mitad derecha con la clave
-	SBox(&bloqueTrasSBOX, &xBlock); //Aplicamos las cajas al bloque resultante anterior
-	permutacionF_DES(&pBlock, &bloqueTrasSBOX); //Terminamos con la ultima permutacion de F_DES, 32bits
-
-	//Recordamos que L(i) = R(i-1). Asique copiamos el bloque para preparar la salida
-	copiarBloque(izqSalida, derEntrada, BITS_IN_FEISTEL / 2);
-
-	//Y recordamos que R(i) = L(i-1) + F(R(i-1), k(i)), siendo el mas la suma exclusiva
-	xorDES(derSalida, izqEntrada, &pBlock, BITS_IN_P);
-}
-/*--------------------------------------------------------------------------
-Expansion de R(i-1) necesaria en la funcion F de DES
-- Entrada:
-	* Bloque entrada
-	* Bloque resultado
---------------------------------------------------------------------------*/
-void expansion(Bloque* resultado, Bloque* entrada) {
-	permutacion(resultado, entrada, E, BITS_IN_E);
-}
-/*--------------------------------------------------------------------------
-Copia un bloque
-- Entrada:
-	* Bloque entrada
-	* Bloque resultado
-	* Longitud del bloque
---------------------------------------------------------------------------*/
-void copiarBloque(Bloque* resultado, Bloque* entrada, int lon) {
-
-	int i;
-
-	for (i = 1; i <= lon; i++) resultado->bloque[i] = entrada->bloque[i];
-}
-/*--------------------------------------------------------------------------
-Une dos bloques
-- Entrada:
-	* Bloque resultado
-	* Mitad izquierda
-	* Mitad derecha
---------------------------------------------------------------------------*/
-void unirBloques(Bloque* bloque, Bloque* medizq, Bloque* medder) {
-
-	int i;
-
-	for (i = 1; i <= BITS_IN_FEISTEL / 2; i++) {
-		bloque->bloque[i] = medizq->bloque[i];
-		bloque->bloque[BITS_IN_FEISTEL / 2 + i] = medder->bloque[i];
-	}
-}
-/*--------------------------------------------------------------------------
-Realiza el swap (con la permutacion proporcionada en Moodle) del DES
-- Entrada:
-	* Bloque entrada
-	* Bloque resultado
---------------------------------------------------------------------------*/
-void swap(Bloque* resultado, Bloque* entrada) {
-	permutacion(resultado, entrada, SWAP, BITS_IN_SWAP);
-}
-/*--------------------------------------------------------------------------
-Realiza la inveresa de la permutación Inicial (IP^-1) del DES
-- Entrada:
-	* Bloque entrada
-	* Bloque resultado
---------------------------------------------------------------------------*/
-void invPermArranque(Bloque* resultado, Bloque* entrada) {
-	permutacion(resultado, entrada, IP_INV, BITS_IN_IP);
-}
-
-/*--------------------------------------------------------------------------
-Realiza la funcionalidad de las Sboxes
-- Entrada:
-	* Bloque entrada
-	* Bloque resultado
---------------------------------------------------------------------------*/
-void SBox(Bloque* resultado, Bloque* entrada) {
-
-	int i, fila, col;
-	int value;
-
-	for (i = 0; i < NUM_S_BOXES; i++) {
-		fila = 2 * entrada->bloque[1 + 6 * i] + entrada->bloque[1 + 6 * i + 5];
-		col = 8 * entrada->bloque[1 + 6 * i + 1] + 4 * entrada->bloque[1 + 6 * i + 2];
-		col +=  2 * entrada->bloque[1 + 6 * i + 3] + entrada->bloque[1 + 6 * i + 4];
-		
-		value = S_BOXES[i][fila][col];
-		resultado->bloque[1 + i * 4 + 3] = value % 2;
-		resultado->bloque[1 + i * 4 + 2] = (value / 2) % 2;
-		resultado->bloque[1 + i * 4 + 1] = (value / 4) % 2;
-		resultado->bloque[1 + i * 4] = (value / 8) % 2;
-	}
-}
-/*--------------------------------------------------------------------------
-Realiza la permutacion F del DES
-- Entrada:
-	* Bloque entrada
-	* Bloque resultado
---------------------------------------------------------------------------*/
-void permutacionF_DES(Bloque* resultado, Bloque* entrada) {
-	permutacion(resultado, entrada, P, BITS_IN_P);
+	for (i = 1; i <= (nArgs - 2); i++)
+		if ((strncmp(args[i], modo, longitud) == 0)
+				&& (strlen(args[i]) == longitud)) {
+			if (flag)
+				return -1;
+			else {
+				strcpy(cadena, args[i + 1]);
+				flag = 1;
+			}
+		}
+	return flag;
 }
 
 
+void generaClave(uint8_t* clave) {
+    int i;
+    for (i=0; i<TAM_CLAVE; i++) {
+        clave[i] = rand()%255;
+    }
+}
+
+
+void generaSubClavesDES(uint8_t* clave, subclave* subclaves) {
+    int i, j;
+    int desp;
+    uint8_t byte_desp, bits_desp1, bits_desp2, bits_desp3, bits_desp4;
+
+    //Inicializamos a ceros
+    for (i=0; i<8; i++) {
+        subclaves[0].k[i] = 0;
+    }
+    //PC1
+    for (i=0; i<BITS_IN_PC1; i++) {
+        desp = PC1[i];
+        //Mascara para tomar el bit de la posicion correcta de nuestra clave
+        byte_desp = 0x80 >> ((desp - 1)%8);
+	printf("%lu", byte_desp);
+        //Tomamos el byte correspondiente y cogemos el bit de nuestra clave con una AND
+        byte_desp &= clave[(desp - 1)/8];
+        //Si era un 1 lo movemos al principio si era 0 se queda como estaba
+        byte_desp = byte_desp << ((desp - 1)%8);
+	printf("Aqui estan los datos %lu\n", subclaves[0].k[i/8]);
+        //Metemos en nuestra subclave el bit obtenido en la posicion que le corresponde moviendo en aritmetica modular 8 el bit
+       // subclaves[0].k[i/8] |= (byte_desp >> i%8);
+    }
+
+    for (i=1; i<ROUNDS+1; i++) {
+        //Rellenamos con la subclave anterior
+        for (j=0; j<4; j++) {
+            subclaves[i].c[j] = subclaves[i-1].c[j];
+            subclaves[i].d[j] = subclaves[i-1].d[j];
+        }
+
+        desp = ROUND_SHIFTS[i];
+        if (desp == 1){
+            byte_desp = 0x80;
+        } else {
+            byte_desp = 0xC0;
+        }
+
+        // Aqui tomo los bits que voy a desplazar en C
+        bits_desp1 = byte_desp & subclaves[i].c[0];
+        bits_desp2 = byte_desp & subclaves[i].c[1];
+        bits_desp3 = byte_desp & subclaves[i].c[2];
+        bits_desp4 = byte_desp & subclaves[i].c[3];
+
+        //Al primero le desplazo lo necesario a la izquierda y en los huecos que ha dejado meto los desplazados del anterior
+        subclaves[i].c[0] <<= desp;
+        subclaves[i].c[0] |= (bits_desp2 >> (8 - desp));
+        //Lo mismo con el segundo
+        subclaves[i].c[1] <<= desp;
+        subclaves[i].c[1] |= (bits_desp3 >> (8 - desp));
+        //Lo mismo con el tercero
+        subclaves[i].c[2] <<= desp;
+        subclaves[i].c[2] |= (bits_desp4 >> (8 - desp));
+        //Para el cuarto hay que tener en cuenta que es circular y que ademas solo valen los 4 primeros bits por eso tomo los 4 bits del primer desplazamiento en los huecos que he dejado al mover el ultimo
+        subclaves[i].c[3] <<= desp;
+        subclaves[i].c[3] |= (bits_desp1 >> (4 - desp));
+
+        // Mismo proceso de desplazamientos para D
+        bits_desp1 = byte_desp & subclaves[i].d[0];
+        bits_desp2 = byte_desp & subclaves[i].d[1];
+        bits_desp3 = byte_desp & subclaves[i].d[2];
+        bits_desp4 = byte_desp & subclaves[i].d[3];
+
+        subclaves[i].d[0] <<= desp;
+        subclaves[i].d[0] |= (bits_desp2 >> (8 - desp));
+
+        subclaves[i].d[1] <<= desp;
+        subclaves[i].d[1] |= (bits_desp3 >> (8 - desp));
+
+        subclaves[i].d[2] <<= desp;
+        subclaves[i].d[2] |= (bits_desp4 >> (8 - desp));
+
+        subclaves[i].d[3] <<= desp;
+        subclaves[i].d[3] |= (bits_desp1 >> (4 - desp));
+
+        for (j=0; j<BITS_IN_PC2; j++) {
+            //Mismo procedimiento con PC1 que con PC2 salvo que ahora tomamos solo 48 bits de las subclaves
+            desp = PC2[j];                
+            if (desp <= BITS_IN_PC1/2) {//Si es menor o igual que 28 es que estoy en C
+                byte_desp = 0x80 >> ((desp - 1)%8);
+                byte_desp &= subclaves[i].c[(desp - 1)/8];
+                byte_desp <<= ((desp - 1)%8);
+            } else {//Si es mayor que 28 es que es un bit de D
+                byte_desp = 0x80 >> ((desp - 29)%8);
+                byte_desp &= subclaves[i].d[(desp - 29)/8];
+                byte_desp <<= ((desp - 29)%8);
+            }
+            subclaves[i].k[j/8] |= (byte_desp >> j%8);
+        }
+    }
+    return;
+}
+
+void DES(uint8_t* in, uint8_t* out, subclave* subclaves, int modo) {
+    int i, k,orden_clave;
+    int desp;
+    uint8_t byte_desp, aux_ip[8],l[4], r[4],li[4], ri[4], er[6], sbox_er[4],fila,col;
+    memset(aux_ip, 0, 8);
+    memset(out, 0, 8);
+
+    for (i=0; i<BITS_IN_IP; i++) {
+        /**
+         * Igual que al generar las subclaves primero tomamos el byte a desplazar y vemos si es un 0 o un 1. Luego lo ponemos al principio
+         * en nuestra variable auxiliar byte_desp y lo guardamos en la posicion correspondiente del byte correspondiente del bucle
+         */
+        desp = IP[i];
+        byte_desp = 0x80 >> ((desp - 1)%8);
+        byte_desp &= in[(desp - 1)/8];
+        byte_desp <<= ((desp - 1)%8);
+
+        aux_ip[i/8] |= (byte_desp >> i%8);
+    }
+
+    //Una vez permutada la clave se divide en parte izquierda y parte derecha
+    for (i=0; i<4; i++) {
+        l[i] = aux_ip[i];
+        r[i] = aux_ip[i+4];
+    }
+
+    for (k=1; k<=ROUNDS; k++) {
+        //Li=Ri-1
+        memcpy(li, r, 4);
+        memset(er, 0, 6);
+
+        for (i=0; i<BITS_IN_E; i++) {
+                //Hacemos lo mismo con E que con IP
+                desp = E[i];
+                byte_desp = 0x80 >> ((desp - 1)%8);
+                byte_desp &= r[(desp - 1)/8];
+                byte_desp <<= ((desp - 1)%8);
+                er[i/8] |= (byte_desp >> i%8);
+        }
+
+        if (modo == DESCIFRAR) {
+                orden_clave = 17 - k;
+        } else {
+                orden_clave = k;
+        }
+
+        //F=E(Ri-1) XOR Ki
+        for (i=0; i<6; i++) {
+            er[i] ^= subclaves[orden_clave].k[i];
+        }
+
+        memset(sbox_er, 0, 4);
+
+
+        /**
+         * En el primer calculo tomamos los bits 6 y 1 y los movemos a la derecha para calcular la fila
+         * Hacemos lo mismo con los bits 5,4,3 moviendolos 3 posiciones a la derecha
+         * A partir de aqui vamos rellenando los 24 bits de la salida de las sboxes teniendo en cuenta por el que nos ibamos
+         * a la hora de aplicar las mascaras para coger los bits de e y hacer los desplazamientos
+         */
+
+        // Byte 1
+        fila = 0;
+
+        fila |= ((er[0] & 0x80) >> 6);
+        fila |= ((er[0] & 0x04) >> 2);
+
+        col = 0;
+        //
+        col |= ((er[0] & 0x78) >> 3);
+
+        sbox_er[0] |= ((uint8_t)S_BOXES[0][fila][col] << 4);
+
+        fila = 0;
+        fila |= (er[0] & 0x02);
+        fila |= ((er[1] & 0x10) >> 4);
+
+        col = 0;
+        col |= ((er[0] & 0x01) << 3);
+        col |= ((er[1] & 0xE0) >> 5);
+
+        sbox_er[0] |= (uint8_t)S_BOXES[1][fila][col];
+
+        // Byte 2
+        fila = 0;
+        fila |= ((er[1] & 0x08) >> 2);
+        fila |= ((er[2] & 0x40) >> 6);
+
+        col = 0;
+        col |= ((er[1] & 0x07) << 1);
+        col |= ((er[2] & 0x80) >> 7);
+
+        sbox_er[1] |= ((uint8_t)S_BOXES[2][fila][col] << 4);
+
+        fila = 0;
+        fila |= ((er[2] & 0x20) >> 4);
+        fila |= (er[2] & 0x01);
+
+        col = 0;
+        col |= ((er[2] & 0x1E) >> 1);
+
+        sbox_er[1] |= (uint8_t)S_BOXES[3][fila][col];
+
+        // Byte 3
+        fila = 0;
+        fila |= ((er[3] & 0x80) >> 6);
+        fila |= ((er[3] & 0x04) >> 2);
+
+        col = 0;
+        col |= ((er[3] & 0x78) >> 3);
+
+        sbox_er[2] |= ((uint8_t)S_BOXES[4][fila][col] << 4);
+
+        fila = 0;
+        fila |= (er[3] & 0x02);
+        fila |= ((er[4] & 0x10) >> 4);
+
+        col = 0;
+        col |= ((er[3] & 0x01) << 3);
+        col |= ((er[4] & 0xE0) >> 5);
+
+        sbox_er[2] |= (uint8_t)S_BOXES[5][fila][col];
+
+        // Byte 4
+        fila = 0;
+        fila |= ((er[4] & 0x08) >> 2);
+        fila |= ((er[5] & 0x40) >> 6);
+
+        col = 0;
+        col |= ((er[4] & 0x07) << 1);
+        col |= ((er[5] & 0x80) >> 7);
+
+        sbox_er[3] |= ((uint8_t)S_BOXES[6][fila][col] << 4);
+
+        fila = 0;
+        fila |= ((er[5] & 0x20) >> 4);
+        fila |= (er[5] & 0x01);
+
+        col = 0;
+        col |= ((er[5] & 0x1E) >> 1);
+
+        sbox_er[3] |= (uint8_t)S_BOXES[7][fila][col];
+
+        memset(ri, 0, 4);
+
+        for (i=0; i<BITS_IN_P; i++) {
+            desp = P[i];
+            byte_desp = 0x80 >> ((desp - 1)%8);
+            byte_desp &= sbox_er[(desp - 1)/8];
+            byte_desp <<= ((desp - 1)%8);
+
+            ri[i/8] |= (byte_desp >> i%8);
+        }
+
+        for (i=0; i<4; i++) {
+            ri[i] ^= l[i];
+        }
+
+        for (i=0; i<4; i++) {
+            l[i] = li[i];
+            r[i] = ri[i];
+        }
+    }
+    //Concatenamos invirtiendo el orden antes de aplicar IP_INV
+    for (i=0; i<4; i++) {
+        aux_ip[i] = r[i];
+        aux_ip[4+i] = l[i];
+    }
+
+    for (i=0; i<BITS_IN_IP; i++) {
+        desp = IP_INV[i];
+        byte_desp = 0x80 >> ((desp - 1)%8);
+        byte_desp &= aux_ip[(desp - 1)/8];
+        byte_desp <<= ((desp - 1)%8);
+        out[i/8] |= (byte_desp >> i%8);
+    }
+    return;
+        
+}
+
+
+uint8_t ** DES_Avalancha(uint8_t* in, uint8_t* out, subclave* subclaves, int modo) {
+    int i, k,orden_clave;
+    int desp;
+    uint8_t byte_desp, aux_ip[8],l[4], r[4],li[4], ri[4], er[6], sbox_er[4],fila,col;
+    uint8_t * ronda;
+    memset(aux_ip, 0, 8);
+    memset(out, 0, 8);
+    uint8_t ** rondas=malloc(16*sizeof(uint8_t *));
+
+    for (i=0; i<BITS_IN_IP; i++) {
+        /**
+         * Igual que al generar las subclaves primero tomamos el byte a desplazar y vemos si es un 0 o un 1. Luego lo ponemos al principio
+         * en nuestra variable auxiliar byte_desp y lo guardamos en la posicion correspondiente del byte correspondiente del bucle
+         */
+        
+        desp = IP[i];
+        byte_desp = 0x80 >> ((desp - 1)%8);
+        byte_desp &= in[(desp - 1)/8];
+        byte_desp <<= ((desp - 1)%8);
+
+        aux_ip[i/8] |= (byte_desp >> i%8);
+    }
+
+    //Una vez permutada la clave se divide en parte izquierda y parte derecha
+    for (i=0; i<4; i++) {
+        l[i] = aux_ip[i];
+        r[i] = aux_ip[i+4];
+    }
+
+    for (k=1; k<=ROUNDS; k++) {
+        //Li=Ri-1
+        memcpy(li, r, 4);
+        memset(er, 0, 6);
+
+        for (i=0; i<BITS_IN_E; i++) {
+            //Hacemos lo mismo con E que con IP
+            desp = E[i];
+            byte_desp = 0x80 >> ((desp - 1)%8);
+            byte_desp &= r[(desp - 1)/8];
+            byte_desp <<= ((desp - 1)%8);
+            er[i/8] |= (byte_desp >> i%8);
+        }
+
+        if (modo == DESCIFRAR) {
+            orden_clave = 17 - k;
+        } else {
+            orden_clave = k;
+        }
+
+        //F=E(Ri-1) XOR Ki
+        for (i=0; i<6; i++) {
+            er[i] ^= subclaves[orden_clave].k[i];
+        }
+
+        memset(sbox_er, 0, 4);
+
+
+        /**
+         * En el primer calculo tomamos los bits 6 y 1 y los movemos a la derecha para calcular la fila
+         * Hacemos lo mismo con los bits 5,4,3 moviendolos 3 posiciones a la derecha
+         * A partir de aqui vamos rellenando los 24 bits de la salida de las sboxes teniendo en cuenta por el que nos ibamos
+         * a la hora de aplicar las mascaras para coger los bits de e y hacer los desplazamientos
+         */
+
+        // Byte 1
+        fila = 0;
+
+        fila |= ((er[0] & 0x80) >> 6);
+        fila |= ((er[0] & 0x04) >> 2);
+
+        col = 0;
+        //
+        col |= ((er[0] & 0x78) >> 3);
+
+        sbox_er[0] |= ((uint8_t)S_BOXES[0][fila][col] << 4);
+
+        fila = 0;
+        fila |= (er[0] & 0x02);
+        fila |= ((er[1] & 0x10) >> 4);
+
+        col = 0;
+        col |= ((er[0] & 0x01) << 3);
+        col |= ((er[1] & 0xE0) >> 5);
+
+        sbox_er[0] |= (uint8_t)S_BOXES[1][fila][col];
+
+        // Byte 2
+        fila = 0;
+        fila |= ((er[1] & 0x08) >> 2);
+        fila |= ((er[2] & 0x40) >> 6);
+
+        col = 0;
+        col |= ((er[1] & 0x07) << 1);
+        col |= ((er[2] & 0x80) >> 7);
+
+        sbox_er[1] |= ((uint8_t)S_BOXES[2][fila][col] << 4);
+
+        fila = 0;
+        fila |= ((er[2] & 0x20) >> 4);
+        fila |= (er[2] & 0x01);
+
+        col = 0;
+        col |= ((er[2] & 0x1E) >> 1);
+
+        sbox_er[1] |= (uint8_t)S_BOXES[3][fila][col];
+
+        // Byte 3
+        fila = 0;
+        fila |= ((er[3] & 0x80) >> 6);
+        fila |= ((er[3] & 0x04) >> 2);
+
+        col = 0;
+        col |= ((er[3] & 0x78) >> 3);
+
+        sbox_er[2] |= ((uint8_t)S_BOXES[4][fila][col] << 4);
+
+        fila = 0;
+        fila |= (er[3] & 0x02);
+        fila |= ((er[4] & 0x10) >> 4);
+
+        col = 0;
+        col |= ((er[3] & 0x01) << 3);
+        col |= ((er[4] & 0xE0) >> 5);
+
+        sbox_er[2] |= (uint8_t)S_BOXES[5][fila][col];
+
+        // Byte 4
+        fila = 0;
+        fila |= ((er[4] & 0x08) >> 2);
+        fila |= ((er[5] & 0x40) >> 6);
+
+        col = 0;
+        col |= ((er[4] & 0x07) << 1);
+        col |= ((er[5] & 0x80) >> 7);
+
+        sbox_er[3] |= ((uint8_t)S_BOXES[6][fila][col] << 4);
+
+        fila = 0;
+        fila |= ((er[5] & 0x20) >> 4);
+        fila |= (er[5] & 0x01);
+
+        col = 0;
+        col |= ((er[5] & 0x1E) >> 1);
+
+        sbox_er[3] |= (uint8_t)S_BOXES[7][fila][col];
+
+        memset(ri, 0, 4);
+
+        for (i=0; i<BITS_IN_P; i++) {
+            desp = P[i];
+            byte_desp = 0x80 >> ((desp - 1)%8);
+            byte_desp &= sbox_er[(desp - 1)/8];
+            byte_desp <<= ((desp - 1)%8);
+
+            ri[i/8] |= (byte_desp >> i%8);
+        }
+
+        for (i=0; i<4; i++) {
+            ri[i] ^= l[i];
+        }
+        rondas[k-1]=(uint8_t *) malloc(8*sizeof(uint8_t)); 
+        strncpy(rondas[k-1],l,4);
+        strncpy(rondas[k-1]+4,r,4);
+        
+        
+        for (i=0; i<4; i++) {
+            l[i] = li[i];
+            r[i] = ri[i];
+        }
+    }
+    //Concatenamos invirtiendo el orden antes de aplicar IP_INV
+    for (i=0; i<4; i++) {
+        aux_ip[i] = r[i];
+        aux_ip[4+i] = l[i];
+    }
+
+    for (i=0; i<BITS_IN_IP; i++) {
+        desp = IP_INV[i];
+        byte_desp = 0x80 >> ((desp - 1)%8);
+        byte_desp &= aux_ip[(desp - 1)/8];
+        byte_desp <<= ((desp - 1)%8);
+        out[i/8] |= (byte_desp >> i%8);
+    }
+    return rondas;
+        
+}
+
+void DES_CBC(uint8_t* in, uint8_t* out, subclave* subclaves,uint8_t * chain, int modo) {
+    int i, k,orden_clave;
+    int desp;
+    uint8_t byte_desp, aux_ip[8],l[4], r[4],li[4], ri[4], er[6], sbox_er[4],fila,col,IV[8];
+    memset(aux_ip, 0, 8);
+    memset(out, 0, 8);
+    generaClave(IV);
+
+    if(modo==CIFRAR){
+        for (i=0;i<TAM_CLAVE;i++){
+           in[i]^=chain[i]; 
+        }
+    }
+    for (i=0; i<BITS_IN_IP; i++) {
+        /**
+         * Igual que al generar las subclaves primero tomamos el byte a desplazar y vemos si es un 0 o un 1. Luego lo ponemos al principio
+         * en nuestra variable auxiliar byte_desp y lo guardamos en la posicion correspondiente del byte correspondiente del bucle
+         */
+        desp = IP[i];
+        byte_desp = 0x80 >> ((desp - 1)%8);
+        byte_desp &= in[(desp - 1)/8];
+        byte_desp <<= ((desp - 1)%8);
+
+        aux_ip[i/8] |= (byte_desp >> i%8);
+    }
+
+    //Una vez permutada la clave se divide en parte izquierda y parte derecha
+    for (i=0; i<4; i++) {
+        l[i] = aux_ip[i];
+        r[i] = aux_ip[i+4];
+    }
+
+    for (k=1; k<=ROUNDS; k++) {
+        //Li=Ri-1
+        memcpy(li, r, 4);
+        memset(er, 0, 6);
+
+        for (i=0; i<BITS_IN_E; i++) {
+                //Hacemos lo mismo con E que con IP
+                desp = E[i];
+                byte_desp = 0x80 >> ((desp - 1)%8);
+                byte_desp &= r[(desp - 1)/8];
+                byte_desp <<= ((desp - 1)%8);
+                er[i/8] |= (byte_desp >> i%8);
+        }
+
+        if (modo == DESCIFRAR) {
+                orden_clave = 17 - k;
+        } else {
+                orden_clave = k;
+        }
+
+        //F=E(Ri-1) XOR Ki
+        for (i=0; i<6; i++) {
+            er[i] ^= subclaves[orden_clave].k[i];
+        }
+
+        memset(sbox_er, 0, 4);
+
+
+        /**
+         * En el primer calculo tomamos los bits 6 y 1 y los movemos a la derecha para calcular la fila
+         * Hacemos lo mismo con los bits 5,4,3 moviendolos 3 posiciones a la derecha
+         * A partir de aqui vamos rellenando los 24 bits de la salida de las sboxes teniendo en cuenta por el que nos ibamos
+         * a la hora de aplicar las mascaras para coger los bits de e y hacer los desplazamientos
+         */
+
+        // Byte 1
+        fila = 0;
+
+        fila |= ((er[0] & 0x80) >> 6);
+        fila |= ((er[0] & 0x04) >> 2);
+
+        col = 0;
+        //
+        col |= ((er[0] & 0x78) >> 3);
+
+        sbox_er[0] |= ((uint8_t)S_BOXES[0][fila][col] << 4);
+
+        fila = 0;
+        fila |= (er[0] & 0x02);
+        fila |= ((er[1] & 0x10) >> 4);
+
+        col = 0;
+        col |= ((er[0] & 0x01) << 3);
+        col |= ((er[1] & 0xE0) >> 5);
+
+        sbox_er[0] |= (uint8_t)S_BOXES[1][fila][col];
+
+        // Byte 2
+        fila = 0;
+        fila |= ((er[1] & 0x08) >> 2);
+        fila |= ((er[2] & 0x40) >> 6);
+
+        col = 0;
+        col |= ((er[1] & 0x07) << 1);
+        col |= ((er[2] & 0x80) >> 7);
+
+        sbox_er[1] |= ((uint8_t)S_BOXES[2][fila][col] << 4);
+
+        fila = 0;
+        fila |= ((er[2] & 0x20) >> 4);
+        fila |= (er[2] & 0x01);
+
+        col = 0;
+        col |= ((er[2] & 0x1E) >> 1);
+
+        sbox_er[1] |= (uint8_t)S_BOXES[3][fila][col];
+
+        // Byte 3
+        fila = 0;
+        fila |= ((er[3] & 0x80) >> 6);
+        fila |= ((er[3] & 0x04) >> 2);
+
+        col = 0;
+        col |= ((er[3] & 0x78) >> 3);
+
+        sbox_er[2] |= ((uint8_t)S_BOXES[4][fila][col] << 4);
+
+        fila = 0;
+        fila |= (er[3] & 0x02);
+        fila |= ((er[4] & 0x10) >> 4);
+
+        col = 0;
+        col |= ((er[3] & 0x01) << 3);
+        col |= ((er[4] & 0xE0) >> 5);
+
+        sbox_er[2] |= (uint8_t)S_BOXES[5][fila][col];
+
+        // Byte 4
+        fila = 0;
+        fila |= ((er[4] & 0x08) >> 2);
+        fila |= ((er[5] & 0x40) >> 6);
+
+        col = 0;
+        col |= ((er[4] & 0x07) << 1);
+        col |= ((er[5] & 0x80) >> 7);
+
+        sbox_er[3] |= ((uint8_t)S_BOXES[6][fila][col] << 4);
+
+        fila = 0;
+        fila |= ((er[5] & 0x20) >> 4);
+        fila |= (er[5] & 0x01);
+
+        col = 0;
+        col |= ((er[5] & 0x1E) >> 1);
+
+        sbox_er[3] |= (uint8_t)S_BOXES[7][fila][col];
+
+        memset(ri, 0, 4);
+
+        for (i=0; i<BITS_IN_P; i++) {
+            desp = P[i];
+            byte_desp = 0x80 >> ((desp - 1)%8);
+            byte_desp &= sbox_er[(desp - 1)/8];
+            byte_desp <<= ((desp - 1)%8);
+
+            ri[i/8] |= (byte_desp >> i%8);
+        }
+
+        for (i=0; i<4; i++) {
+            ri[i] ^= l[i];
+        }
+
+        for (i=0; i<4; i++) {
+            l[i] = li[i];
+            r[i] = ri[i];
+        }
+    }
+    //Concatenamos invirtiendo el orden antes de aplicar IP_INV
+    for (i=0; i<4; i++) {
+        aux_ip[i] = r[i];
+        aux_ip[4+i] = l[i];
+    }
+
+    for (i=0; i<BITS_IN_IP; i++) {
+        desp = IP_INV[i];
+        byte_desp = 0x80 >> ((desp - 1)%8);
+        byte_desp &= aux_ip[(desp - 1)/8];
+        byte_desp <<= ((desp - 1)%8);
+        out[i/8] |= (byte_desp >> i%8);
+    }
+    if(modo==DESCIFRAR){
+        for (i=0;i<TAM_CLAVE;i++){
+           out[i]^=chain[i]; 
+        }
+    }
+    
+    return;
+        
+}
+
+
+unsigned int pasarAHexa (char * c){
+    return (unsigned int)*c;
+}
+
+int pasarABin(char * out, size_t len_out, const char *in, size_t n){
+    size_t i;
+    int retval=0;
+    int a,b,c;
+    if(len_out < 8*n+1){
+        fprintf(stderr,"La salida no tiene el espacio suficiente");
+    }
+    while(n-->0 && len_out >1){
+        for (i=0; len_out>1 && i<8;i++, len_out--){
+            *out=(((unsigned int)*in) >> i) & 1;
+            out++;
+        }
+        in++;
+    }
+    if(len_out==0){
+        out--;/*Pisa el ultimo char escrito*/
+        retval= 1;
+    }
+    *out='\0';
+    return retval;
+}
+char * readFileBin(char * filename, long * filelen){
+
+	FILE *fileptr;
+	char *buffer;
+
+	fileptr = fopen(filename, "rb");
+	fseek(fileptr, 0, SEEK_END);
+	*filelen = ftell(fileptr);
+	rewind(fileptr);
+
+	buffer = (char *)malloc((*filelen+1)*sizeof(char));
+	fread(buffer, *filelen, 1, fileptr);
+	fclose(fileptr);
+	return buffer;
+}
+
+void imprimeBinario(char  input) {
+    int i;
+    for (i=0; i<8; i++) {
+            char shift_byte = 0x01 << (7-i);
+            if (shift_byte & input) {
+                    printf("1");
+            } else {
+                    printf("0");
+            }
+    }
+}
 
 
