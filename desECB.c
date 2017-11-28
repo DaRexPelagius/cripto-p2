@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
 	printf("Entrada: %s Salida: %s\n", ficheroentrada, ficherosalida);
 
 	//Preparamos la estructura auxiliar que hemos declarado para guardar
-	//la descomposicion de la clave a lo largo del DES
+	//la descomposicion de la clave a lo largo del aplicarDES
 	DescomposicionClave* subclaves = (DescomposicionClave*) malloc(
 			17 * sizeof(DescomposicionClave));
 	tratarClave(clave, subclaves);
@@ -193,7 +193,7 @@ int main(int argc, char** argv) {
 
 	n_bloques = lon / TAM_CLAVE + ((lon % TAM_CLAVE) ? 1 : 0);
 
-	//Hacemos un bucle que vaya cogiendo los bloques a los que aplicar DES
+	//Hacemos un bucle que vaya cogiendo los bloques a los que aplicar aplicarDES
 	while (fread(bloque_entrada, 1, 8, fentrada)) {
 		aux++;//Llevamos la cuenta de cuantos bloques llevamos para tener en cuenta el padding
 		if (aux == n_bloques) {	//En la ultima iteracion realizamos el padding como sea necesario
@@ -205,19 +205,19 @@ int main(int argc, char** argv) {
 					memset((bloque_entrada + 8 - padding), (uint8_t) padding,
 							padding);
 				}
-				//Aplicamos DES
-				DES(bloque_entrada, bloque_salida, subclaves, modo);
+				//Aplicamos aplicarDES
+				aplicarDES(bloque_entrada, bloque_salida, subclaves, modo);
 				//Escribimos la salida en el fichero destino
 				fwrite(bloque_salida, 1, 8, fsalida);
 
 				//Si tiene un tam divisible entre 8 meto un bloque adicional para padding
 				if (padding == 8) {
 					memset(bloque_entrada, (uint8_t) padding, 8);
-					DES(bloque_entrada, bloque_salida, subclaves, modo);
+					aplicarDES(bloque_entrada, bloque_salida, subclaves, modo);
 					fwrite(bloque_salida, 1, 8, fsalida);
 				}
 			} else if (modo == 2) {			//Desciframos
-				DES(bloque_entrada, bloque_salida, subclaves, modo);
+				aplicarDES(bloque_entrada, bloque_salida, subclaves, modo);
 				padding = bloque_salida[7];
 
 				if (padding < 8) {
@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
 				}
 			}
 		} else {			//Si no estamos en el
-			DES(bloque_entrada, bloque_salida, subclaves, modo);
+			aplicarDES(bloque_entrada, bloque_salida, subclaves, modo);
 			fwrite(bloque_salida, 1, 8, fsalida);
 		}
 		memset(bloque_salida, 0, 8);			//Limpiamos el bloque de salida
@@ -471,15 +471,30 @@ void aplicarLCS(DescomposicionClave* subclaves) {
 	}
 }
 
-void DES(uint8_t* bloque_entrada, uint8_t* bloque_salida,
+void aplicarDES(uint8_t* bloque_entrada, uint8_t* bloque_salida,
 		DescomposicionClave* subclaves, int modo) {
-	int i, k, orden_clave;
+	int i;
 	int desp;
-	uint8_t byte_desp, aux_ip[8], l[4], r[4], li[4], ri[4], er[6], sbox_er[4],
-			fila, col;
-	memset(aux_ip, 0, 8);
+	uint8_t aux_ip[8], l[4], r[4];
 	memset(bloque_salida, 0, 8);
-	// ESTA FUNCION ES APLICAR_IP
+	memset(aux_ip, 0, 8);
+
+	aplicarIP(bloque_entrada, aux_ip);
+
+	//este bucle de las rondas lo podemos llamar en una funcion ronda_DES
+	aplicarRondaDES(aux_ip, modo, subclaves, r, l);
+
+	aplicarInversaIP(bloque_salida, aux_ip, r, l);
+
+	return;
+
+}
+
+void aplicarIP(uint8_t* bloque_entrada, uint8_t* aux_ip) {
+
+	int desp, i;
+	uint8_t byte_desp;
+
 	for (i = 0; i < BITS_IN_IP; i++) {
 		/**
 		 * Igual que al generar las subclaves primero tomamos el byte a desplazar y vemos si es un 0 o un 1. Luego lo ponemos al principio
@@ -493,14 +508,46 @@ void DES(uint8_t* bloque_entrada, uint8_t* bloque_salida,
 		aux_ip[i / 8] |= (byte_desp >> i % 8);
 	}
 
-	//ACABAMOS APLICAR IP
+	return;
+
+}
+
+void aplicarInversaIP(uint8_t* bloque_salida, uint8_t* aux_ip, uint8_t* r,
+		uint8_t* l) {
+
+	int desp, i;
+	uint8_t byte_desp;
+
+	//Concatenamos invirtiendo el orden antes de aplicar IP_INV
+	for (i = 0; i < 4; i++) {
+		aux_ip[i] = r[i];
+		aux_ip[4 + i] = l[i];
+	}
+
+	for (i = 0; i < BITS_IN_IP; i++) {
+		desp = IP_INV[i];
+		byte_desp = 0x80 >> ((desp - 1) % 8);
+		byte_desp &= aux_ip[(desp - 1) / 8];
+		byte_desp <<= ((desp - 1) % 8);
+		bloque_salida[i / 8] |= (byte_desp >> i % 8);
+	}
+
+	return;
+
+}
+
+void aplicarRondaDES(uint8_t* aux_ip, int modo, DescomposicionClave* subclaves,
+		uint8_t* r, uint8_t* l) {
+
+	int i, k, desp, orden_clave;
+	uint8_t li[4], ri[4], er[6], sbox_er[4], fila, col, byte_desp;
 
 	//Una vez permutada la clave se divide en parte izquierda y parte derecha
 	for (i = 0; i < 4; i++) {
 		l[i] = aux_ip[i];
 		r[i] = aux_ip[i + 4];
 	}
-	//este bucle de las rondas lo podemos llamar en una funcion ronda_DES
+
 	for (k = 1; k <= ROUNDS; k++) {
 		//Li=Ri-1
 		memcpy(li, r, 4);
@@ -637,21 +684,5 @@ void DES(uint8_t* bloque_entrada, uint8_t* bloque_salida,
 			r[i] = ri[i];
 		}
 	}
-	//Concatenamos invirtiendo el orden antes de aplicar IP_INV
-	for (i = 0; i < 4; i++) {
-		aux_ip[i] = r[i];
-		aux_ip[4 + i] = l[i];
-	}
-	//ESTA FUNCION PODRIA SER APLICAR_INVERSAIP
-	for (i = 0; i < BITS_IN_IP; i++) {
-		desp = IP_INV[i];
-		byte_desp = 0x80 >> ((desp - 1) % 8);
-		byte_desp &= aux_ip[(desp - 1) / 8];
-		byte_desp <<= ((desp - 1) % 8);
-		bloque_salida[i / 8] |= (byte_desp >> i % 8);
-	}
-	//HASTA AQUI
-	return;
-
 }
 
