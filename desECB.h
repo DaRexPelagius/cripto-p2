@@ -25,14 +25,19 @@ typedef struct {
     uint8_t d[TAM_CLAVE/2];
 } subclave;
 
-int getArgs(int nArgs, char** args, int* modo,uint8_t* clave, char* ficheroentrada,
+int getArgs(int nArgs, char** args, int* modo, char* ficheroentrada,
 		int* entrada, char* ficherosalida,
 		int* salida);
 int getModo(int nArgs, char** args, int* modo);
-void getClave(int nArgs, char** args, uint8_t* clave);
 int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud);
 void generaClave(uint8_t* clave);
 void generaSubClavesDES(uint8_t* clave, subclave* subclaves);
 void DES(uint8_t* in, uint8_t* out, subclave* subclaves, int modo);
-uint8_t ** DES_Avalancha(uint8_t* in, uint8_t* out, subclave* subclaves, int modo);
-void DES_CBC(uint8_t* in, uint8_t* out, subclave* subclaves,uint8_t * chain, int modo);
+unsigned int pasarAHexa(char * c);
+int pasarABin(char * out, size_t len_out, const char *in, size_t n);
+char * readFileBin(char * filename, long * filelen);
+void imprimeBinario(char input);
+void generaClave(uint8_t* clave);
+void generaSubClavesDES(uint8_t* clave, subclave* subclaves);
+void DES(uint8_t* in, uint8_t* out, subclave* subclaves, int modo);
+
