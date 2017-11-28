@@ -161,8 +161,8 @@ int main(int argc, char** argv) {
 
 	//Preparamos la estructura auxiliar que hemos declarado para guardar
 	//la descomposicion de la clave a lo largo del DES
-	subclave* subclaves = (subclave*) malloc(17 * sizeof(subclave));
-	generaSubClavesDES(clave, subclaves);
+	DescomposicionClave* subclaves = (DescomposicionClave*) malloc(17 * sizeof(DescomposicionClave));
+	descomponerClave(clave, subclaves);
 
 	//Preparamos memoria para los bloques con los que trabajaremos
 	uint8_t* bloque_entrada = (uint8_t*) malloc(8 * sizeof(int));
@@ -342,41 +342,13 @@ void generaClave(uint8_t* clave) {
 	}
 }
 
-void generaSubClavesDES(uint8_t* clave, subclave* subclaves) {
+void descomponerClave(uint8_t* clave, DescomposicionClave* subclaves) {
 	int i, j;
 	int desp;
 	uint8_t byte_desp, bits_desp1, bits_desp2, bits_desp3, bits_desp4;
 
-	//Inicializamos a ceros
-	for (i = 0; i < 8; i++) {
-		subclaves[0].k[i] = 0;
-	}
-	//PC1
-	for (i = 0; i < BITS_IN_PC1; i++) {
-		desp = PC1[i];
-		//Mascara para tomar el bit de la posicion correcta de nuestra clave
-		byte_desp = 0x80 >> ((desp - 1) % 8);
-		//Tomamos el byte correspondiente y cogemos el bit de nuestra clave con una AND
-		byte_desp &= clave[(desp - 1) / 8];
-		//Si era un 1 lo movemos al principio si era 0 se queda como estaba
-		byte_desp <<= ((desp - 1) % 8);
-		//Metemos en nuestra subclave el bit obtenido en la posicion que le corresponde moviendo en aritmetica modular 8 el bit
-		subclaves[0].k[i / 8] |= (byte_desp >> i % 8);
-	}
-
-	for (i = 0; i < 3; i++) {
-		subclaves[0].c[i] = subclaves[0].k[i];
-	}
-	//C llega hasta el bit 28 de los 56 es decir llega hasta la primera mitad del cuarto byte de K
-	subclaves[0].c[3] = subclaves[0].k[3] & 0xF0;
-
-	//Lo mismo para D pero empezando desde donde habiamos parado con c
-	for (i = 0; i < 3; i++) {
-		subclaves[0].d[i] = (subclaves[0].k[i + 3] & 0x0F) << 4;
-		subclaves[0].d[i] |= (subclaves[0].k[i + 4] & 0xF0) >> 4;
-	}
-	//Para los ultimos 4 bits de D tomo solo los ultimos 4 de la clave
-	subclaves[0].d[3] = (subclaves[0].k[6] & 0x0F) << 4;
+	cleanDescomposicionClave(subclaves);
+	aplicarPC1(clave, subclaves);
 
 	for (i = 1; i < ROUNDS + 1; i++) {
 		//Rellenamos con la subclave anterior
@@ -384,7 +356,6 @@ void generaSubClavesDES(uint8_t* clave, subclave* subclaves) {
 			subclaves[i].c[j] = subclaves[i - 1].c[j];
 			subclaves[i].d[j] = subclaves[i - 1].d[j];
 		}
-
 		desp = ROUND_SHIFTS[i];
 		if (desp == 1) {
 			byte_desp = 0x80;
@@ -443,11 +414,54 @@ void generaSubClavesDES(uint8_t* clave, subclave* subclaves) {
 			}
 			subclaves[i].k[j / 8] |= (byte_desp >> j % 8);
 		}
+
+
 	}
 	return;
 }
 
-void DES(uint8_t* bloque_entrada, uint8_t* bloque_salida, subclave* subclaves,
+void cleanDescomposicionClave(DescomposicionClave* subclaves){
+	int i;
+
+	for (i = 0; i < 8; i++) {
+		subclaves[0].k[i] = 0;
+	}
+}
+
+void aplicarPC1(uint8_t* clave, DescomposicionClave* subclaves){
+	int i, desp;
+	uint8_t byte_desp;
+
+	//PC1
+	for (i = 0; i < BITS_IN_PC1; i++) {
+		desp = PC1[i];
+		//Mascara para tomar el bit de la posicion correcta de nuestra clave
+		byte_desp = 0x80 >> ((desp - 1) % 8);
+		//Tomamos el byte correspondiente y cogemos el bit de nuestra clave con una AND
+		byte_desp &= clave[(desp - 1) / 8];
+		//Si era un 1 lo movemos al principio si era 0 se queda como estaba
+		byte_desp <<= ((desp - 1) % 8);
+		//Metemos en nuestra subclave el bit obtenido en la posicion que le corresponde moviendo en aritmetica modular 8 el bit
+		subclaves[0].k[i / 8] |= (byte_desp >> i % 8);
+	}
+
+
+	for (i = 0; i < 3; i++) {
+		subclaves[0].c[i] = subclaves[0].k[i];
+	}
+	//C llega hasta el bit 28 de los 56 es decir llega hasta la primera mitad del cuarto byte de K
+	subclaves[0].c[3] = subclaves[0].k[3] & 0xF0;
+
+	//Lo mismo para D pero empezando desde donde habiamos parado con c
+	for (i = 0; i < 3; i++) {
+		subclaves[0].d[i] = (subclaves[0].k[i + 3] & 0x0F) << 4;
+		subclaves[0].d[i] |= (subclaves[0].k[i + 4] & 0xF0) >> 4;
+	}
+	//Para los ultimos 4 bits de D tomo solo los ultimos 4 de la clave
+	subclaves[0].d[3] = (subclaves[0].k[6] & 0x0F) << 4;
+}
+
+void DES(uint8_t* bloque_entrada, uint8_t* bloque_salida, DescomposicionClave* subclaves,
 		int modo) {
 	int i, k, orden_clave;
 	int desp;

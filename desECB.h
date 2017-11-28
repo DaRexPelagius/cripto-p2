@@ -24,7 +24,7 @@ typedef struct {
     uint8_t k[TAM_CLAVE];
     uint8_t c[TAM_CLAVE/2];
     uint8_t d[TAM_CLAVE/2];
-} subclave;
+} DescomposicionClave;
 
 int getArgs(int nArgs, char** args, int* modo, char* ficheroentrada,
 		int* entrada, char* ficherosalida,
@@ -32,9 +32,8 @@ int getArgs(int nArgs, char** args, int* modo, char* ficheroentrada,
 int getModo(int nArgs, char** args, int* modo);
 int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud);
 void generaClave(uint8_t* clave);
-void generaSubClavesDES(uint8_t* clave, subclave* subclaves);
-void DES(uint8_t* in, uint8_t* out, subclave* subclaves, int modo);
-void generaClave(uint8_t* clave);
-void generaSubClavesDES(uint8_t* clave, subclave* subclaves);
-void DES(uint8_t* in, uint8_t* out, subclave* subclaves, int modo);
+void descomponerClave(uint8_t* clave, DescomposicionClave* subclaves);
+void DES(uint8_t* in, uint8_t* out, DescomposicionClave* subclaves, int modo);
+void aplicarPC1(uint8_t* clave, DescomposicionClave* subclaves);
+void cleanDescomposicionClave(DescomposicionClave* subclaves);
 
