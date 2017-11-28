@@ -479,7 +479,7 @@ void DES(uint8_t* bloque_entrada, uint8_t* bloque_salida,
 			fila, col;
 	memset(aux_ip, 0, 8);
 	memset(bloque_salida, 0, 8);
-
+	// ESTA FUNCION ES APLICAR_IP
 	for (i = 0; i < BITS_IN_IP; i++) {
 		/**
 		 * Igual que al generar las subclaves primero tomamos el byte a desplazar y vemos si es un 0 o un 1. Luego lo ponemos al principio
@@ -493,12 +493,14 @@ void DES(uint8_t* bloque_entrada, uint8_t* bloque_salida,
 		aux_ip[i / 8] |= (byte_desp >> i % 8);
 	}
 
+	//ACABAMOS APLICAR IP
+
 	//Una vez permutada la clave se divide en parte izquierda y parte derecha
 	for (i = 0; i < 4; i++) {
 		l[i] = aux_ip[i];
 		r[i] = aux_ip[i + 4];
 	}
-
+	//este bucle de las rondas lo podemos llamar en una funcion ronda_DES
 	for (k = 1; k <= ROUNDS; k++) {
 		//Li=Ri-1
 		memcpy(li, r, 4);
@@ -640,7 +642,7 @@ void DES(uint8_t* bloque_entrada, uint8_t* bloque_salida,
 		aux_ip[i] = r[i];
 		aux_ip[4 + i] = l[i];
 	}
-
+	//ESTA FUNCION PODRIA SER APLICAR_INVERSAIP
 	for (i = 0; i < BITS_IN_IP; i++) {
 		desp = IP_INV[i];
 		byte_desp = 0x80 >> ((desp - 1) % 8);
@@ -648,6 +650,7 @@ void DES(uint8_t* bloque_entrada, uint8_t* bloque_salida,
 		byte_desp <<= ((desp - 1) % 8);
 		bloque_salida[i / 8] |= (byte_desp >> i % 8);
 	}
+	//HASTA AQUI
 	return;
 
 }
