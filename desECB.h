@@ -32,8 +32,10 @@ int getArgs(int nArgs, char** args, int* modo, char* ficheroentrada,
 int getModo(int nArgs, char** args, int* modo);
 int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud);
 void generaClave(uint8_t* clave);
-void descomponerClave(uint8_t* clave, DescomposicionClave* subclaves);
+void tratarClave(uint8_t* clave, DescomposicionClave* subclaves);
 void DES(uint8_t* in, uint8_t* out, DescomposicionClave* subclaves, int modo);
 void aplicarPC1(uint8_t* clave, DescomposicionClave* subclaves);
+void dividirClave(DescomposicionClave* subclaves);
+void aplicarLCS(DescomposicionClave* subclaves);
 void cleanDescomposicionClave(DescomposicionClave* subclaves);
 
