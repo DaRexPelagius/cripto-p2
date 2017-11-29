@@ -268,7 +268,6 @@ int main(int argc, char** argv) {
             }else if (modo == 2){
                 memcpy(chain,bloque_entrada,8);
             }
-			memcpy(chain, bloque_salida, 8);
 			fwrite(bloque_salida, 1, 8, fsalida);
 		}
 		memset(bloque_salida, 0, 8);			//Limpiamos el bloque de salida
