@@ -92,6 +92,11 @@ int main(int argc, char** argv) {
 	uint8_t* chain = NULL;
 	unsigned int u;
 
+
+	//Preparamos la inicializacion de rand en esta ejecucion
+	aux = (unsigned int) time(NULL);
+	srand(aux);
+
 	//Comprobamos que al menos el numero de args es el correcto
 	if ((argc != 2) && (argc != 4) && (argc != 6) && (argc != 8) && (argc != 10)) {
 		printf("Numero de argumentos incorrecto.\n");
@@ -147,7 +152,7 @@ int main(int argc, char** argv) {
 			if (((strcmp(argv[i], "-iv") == 0) || (strcmp(argv[i], "-IV") == 0))
 					&& (strlen(argv[i + 1]) == TAM_CLAVE * 2)) {
 				i += 1;
-				chain = (unsigned char*) malloc(TAM_CLAVE * sizeof(char));
+				chain = (uint8_t*) malloc(TAM_CLAVE * sizeof(uint8_t));
 				for (j = 0; j < TAM_CLAVE * 2; j += 2) {
 					sscanf(argv[i] + j, "%02X", &u);
 					chain[j / 2] = u;
@@ -156,7 +161,7 @@ int main(int argc, char** argv) {
 			}
 		}
 	} else {
-		chain = (unsigned char*) malloc(TAM_CLAVE * sizeof(char));
+		chain = (uint8_t*) malloc(TAM_CLAVE * sizeof(uint8_t));
 		generaClave(chain);
 		printf("\nIV:\n");
 		for (j = 0; j < TAM_CLAVE; j++) {
@@ -232,7 +237,7 @@ int main(int argc, char** argv) {
 							padding);
 				}
 				//Aplicamos aplicarDES
-				aplicarDES(bloque_entrada, bloque_salida, subclaves, &modo,
+				aplicarDES(bloque_entrada, bloque_salida, subclaves, modo,
 						chain);
 				memcpy(chain, bloque_salida, 8);
 				//Escribimos la salida en el fichero destino
@@ -241,15 +246,15 @@ int main(int argc, char** argv) {
 				//Si tiene un tam divisible entre 8 meto un bloque adicional para padding
 				if (padding == 8) {
 					memset(bloque_entrada, (uint8_t) padding, 8);
-					aplicarDES(bloque_entrada, bloque_salida, subclaves, &modo,
+					aplicarDES(bloque_entrada, bloque_salida, subclaves, modo,
 							chain);
 					memcpy(chain, bloque_salida, 8);
 					fwrite(bloque_salida, 1, 8, fsalida);
 				}
 			} else if (modo == 2) {			//Desciframos
-				aplicarDES(bloque_entrada, bloque_salida, subclaves, &modo,
+				aplicarDES(bloque_entrada, bloque_salida, subclaves, modo,
 						chain);
-				memcpy(chain, bloque_salida, 8);
+				memcpy(chain, bloque_entrada, 8);
 				padding = bloque_salida[7];
 
 				if (padding < 8) {
@@ -257,7 +262,12 @@ int main(int argc, char** argv) {
 				}
 			}
 		} else {			//Si no estamos en el
-			aplicarDES(bloque_entrada, bloque_salida, subclaves, &modo, chain);
+			aplicarDES(bloque_entrada, bloque_salida, subclaves, modo, chain);
+            if(modo == 1){
+                memcpy(chain, bloque_salida,8);
+            }else if (modo == 2){
+                memcpy(chain,bloque_entrada,8);
+            }
 			memcpy(chain, bloque_salida, 8);
 			fwrite(bloque_salida, 1, 8, fsalida);
 		}
@@ -368,9 +378,6 @@ void generaClave(uint8_t* clave) {
 	int i;
 	unsigned int aux;
 
-	//Preparamos la inicializacion de rand en esta ejecucion
-	aux = (unsigned int) time(NULL);
-	srand(aux);
 	//Creamos una clave con numeros hexadecimales aleatorios
 	for (i = 0; i < TAM_CLAVE; i++) {
 		clave[i] = rand() % 255;
@@ -506,9 +513,8 @@ void aplicarLCS(DescomposicionClave* subclaves) {
 
 void aplicarDES(uint8_t* bloque_entrada, uint8_t* bloque_salida,
 		DescomposicionClave* subclaves, int modo, uint8_t * chain) {
-	int i, k, orden_clave;
-	int desp;
-	uint8_t byte_desp, aux_ip[8], l[4], r[4], li[4], ri[4], er[6],
+	int i, k;
+	uint8_t aux_ip[8], l[4], r[4], li[4], ri[4], er[6],
 			sbox_er[4], fila, col, IV[8];
 	memset(aux_ip, 0, 8);
 	memset(bloque_salida, 0, 8);
@@ -729,7 +735,6 @@ void aplicarRondaDES(uint8_t* aux_ip, int modo, DescomposicionClave* subclaves,
 
 void xorIV(uint8_t* bloque, uint8_t* chain) {
 	int i;
-
 	for (i = 0; i < TAM_CLAVE; i++) {
 		bloque[i] ^= chain[i];
 	}
