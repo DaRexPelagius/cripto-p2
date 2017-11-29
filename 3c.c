@@ -4,28 +4,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-int MATRIX_AUX2[ROWS_PER_SBOX][BITS_OUT_BOX][BITS_OUT_BOX] = { { { 1, 1, 1, 0 },
-		{ 1, 1, 0, 0 }, { 1, 0, 0, 0 }, { 1, 0, 0, 1 } }, { { 1, 1, 0, 1 }, { 0,
-		0, 0, 1 }, { 0, 1, 0, 0 }, { 0, 0, 1, 0 } }, { { 1, 1, 0, 0 }, { 0, 1,
-		0, 0 }, { 1, 0, 1, 1 }, { 0, 0, 0, 1 } }, { { 1, 1, 1, 1 },
-		{ 1, 1, 1, 0 }, { 1, 1, 0, 0 }, { 1, 0, 0, 0 } } };
-
-int* MATRIX_AUX1[ROWS_PER_SBOX][BITS_OUT_BOX] = { { MATRIX_AUX2[0][0],
-		MATRIX_AUX2[0][1], MATRIX_AUX2[0][2], MATRIX_AUX2[0][3] }, {
-		MATRIX_AUX2[1][0], MATRIX_AUX2[1][1], MATRIX_AUX2[1][2],
-		MATRIX_AUX2[1][3] }, { MATRIX_AUX2[2][0], MATRIX_AUX2[2][1],
-		MATRIX_AUX2[2][2], MATRIX_AUX2[2][3] }, { MATRIX_AUX2[3][0],
-		MATRIX_AUX2[3][1], MATRIX_AUX2[3][2], MATRIX_AUX2[3][3] }, };
-
-int** MATRIX[ROWS_PER_SBOX] = { MATRIX_AUX1[0], MATRIX_AUX1[1], MATRIX_AUX1[2],
-		MATRIX_AUX1[3] };
-
-int TRANSLATION[BITS_OUT_BOX] = { 1, 1, 0, 0 };
-
-int POLS_AUX[2][BITS_OUT_BOX + 1] = { { 1, 1, 1, 1, 1 }, { 1, 1, 0, 0, 1 }, };
-
-int* POLS[2] = { POLS_AUX[0], POLS_AUX[1] };
-
 static const unsigned short OUTPUT_PAIRS[SBOX_OUTPUT_PAIRS][2] = { { 0, 1 }, {
 		0, 2 }, { 0, 3 }, { 1, 2 }, { 1, 3 }, { 2, 3 } };
 

@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 		if (strcmp(argv[i], "-C") == 0) {
 
 			clave = (uint8_t*) malloc(TAM_CLAVE * sizeof(char));
-			generaClave(clave);
+			newClave(clave);
 
 			printf("\nClave Hexadecimal: \n0x");
 			for (j = 0; j < TAM_CLAVE; j++) {
@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
 	//Hacemos un bucle que vaya cogiendo los bloques a los que aplicar aplicarDES
 	while (fread(bloque_entrada, 1, 8, fentrada)) {
 		aux++;//Llevamos la cuenta de cuantos bloques llevamos para tener en cuenta el padding
-		if (aux == n_bloques) {	//En la ultima iteracion realizamos el padding como sea necesario
+		if (aux == n_bloques) {
 			//Ciframos
 			if (modo == 1) {
 				padding = 8 - lon % 8;//Comprobamos cuantos bits nos falta para completar bloque
@@ -359,7 +359,7 @@ int getCadena(int nArgs, char** args, char* cadena, char* flag, int longitud) {
  - Entrada:
 	 * Clave que va a ser generada
  --------------------------------------------------------------------------*/
-void generaClave(uint8_t* clave) {
+void newClave(uint8_t* clave) {
 	int i;
 	unsigned int aux;
 

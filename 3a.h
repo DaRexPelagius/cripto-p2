@@ -7,34 +7,19 @@
 #include <time.h>
 
 
-#define MAX_TEXTO 10000
 #define MAX_NOMBRE 256
-#define ENCRYPT_FLAG 1
-#define DECRYPT_FLAG 2
 #define DES_BLOCK_SIZE 64
-#define DES_KEY_SIZE 64
-#define NUM_ROUNDS 16
-#define BITS_IN_FEISTEL 64
-#define BITS_IN_KEY 56
-#define BITS_IN_PC1 56
-#define BITS_IN_PC2 48
-#define BITS_IN_IP 64
-#define BITS_IN_E 48
-#define BITS_IN_P 32
-#define BITS_IN_SWAP 64
 #define NUM_S_BOXES 8
 #define ROWS_PER_SBOX 4
 #define COLUMNS_PER_SBOX 16
 #define SBOX_INPUT_BITS 6
 #define SBOX_OUTPUT_BITS 4
 #define SBOX_OUTPUT_PAIRS 6
-#define BITS_IN_BOX 6
 #define BITS_OUT_BOX 4
-#define BITS_IN_BYTE 8
 
 //Estructura para guardar algunos datos que concluimos de las pruebas
 typedef struct {
-	/* Expectation of linearity of each S-box */
+	/* Esperanza de la linealidad de cada s-box */
 	float expectation[NUM_S_BOXES]; //
 	float desviacion[NUM_S_BOXES]; //Desviacion tipica de la linealidad de cada caja
 	float coincidencias[NUM_S_BOXES * (SBOX_OUTPUT_BITS + 1)]; //Porcentaje de coincidencias

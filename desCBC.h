@@ -29,7 +29,7 @@ int getArgs(int nArgs, char** args, int* modo, char* ficheroentrada,
 		int* entrada, char* ficherosalida, int* salida);
 int getModo(int nArgs, char** args, int* modo);
 int getCadena(int nArgs, char** args, char* cadena, char* modo, int longitud);
-void generaClave(uint8_t* clave);
+void newClave(uint8_t* clave);
 void tratarClave(uint8_t* clave, DescomposicionClave* subclaves);
 void aplicarDES(uint8_t* bloque_entrada, uint8_t* bloque_salida,
 		DescomposicionClave* subclaves, int modo, uint8_t * chain);

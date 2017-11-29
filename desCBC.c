@@ -86,22 +86,21 @@ int main(int argc, char** argv) {
 	unsigned long lon, n_bloques, aux = 0;
 	unsigned short int padding;
 	uint8_t * clave = NULL;
-	int modo, i, j, k, entrada = 0, salida;
+	int modo, i, j, entrada = 0, salida;
 	char ficheroentrada[MAX_NOMBRE], ficherosalida[MAX_NOMBRE];
 	char texto_plano[MAX_TEXTO];
 	uint8_t* chain = NULL;
 	unsigned int u;
 
-
-	//Preparamos la inicializacion de rand en esta ejecucion
+	//Preparamos la inicializacion de rand
 	aux = (unsigned int) time(NULL);
 	srand(aux);
 
-	//Comprobamos que al menos el numero de args es el correcto
+	//Comprobamos que al menos el numero de argumentos es el correcto
 	if ((argc != 2) && (argc != 4) && (argc != 6) && (argc != 8) && (argc != 10)) {
 		printf("Numero de argumentos incorrecto.\n");
 		printf(
-				"Uso: ./desECB {-C | -D -k clave} [-i fichero entrada] [-o fichero salida]\n");
+				"Uso: ./desCBC {-C | -D -k clave -IV vector inicializacion } [-i fichero entrada] [-o fichero salida]\n");
 		return -1;
 	}
 
@@ -109,7 +108,7 @@ int main(int argc, char** argv) {
 			&salida) == -1) {
 		printf("Numero de argumentos incorrecto.\n");
 		printf(
-				"Uso: ./desECB {-C | -D -k clave} [-i fichero entrada] [-o fichero salida]\n");
+				"Uso: ./desCBC {-C | -D -k clave -IV vector inicializacion} [-i fichero entrada] [-o fichero salida]\n");
 		return -1;
 	}
 
@@ -119,7 +118,7 @@ int main(int argc, char** argv) {
 		if (strcmp(argv[i], "-C") == 0) {
 
 			clave = (uint8_t*) malloc(TAM_CLAVE * sizeof(char));
-			generaClave(clave);
+			newClave(clave);
 
 			printf("\nClave Hexadecimal: \n0x");
 			for (j = 0; j < TAM_CLAVE; j++) {
@@ -162,14 +161,14 @@ int main(int argc, char** argv) {
 		}
 	} else {
 		chain = (uint8_t*) malloc(TAM_CLAVE * sizeof(uint8_t));
-		generaClave(chain);
+		newClave(chain);
 		printf("\nIV:\n");
 		for (j = 0; j < TAM_CLAVE; j++) {
 			printf("%02X", chain[j]);
 		}
 		printf("\n");
 	}
-
+	//Abrimos el fichero de entrada
 	if (entrada) {
 		if ((fentrada = fopen(ficheroentrada, "rb")) == NULL) {
 			fprintf(stderr, "Error al abrir el fichero: %s .\n",
@@ -178,7 +177,7 @@ int main(int argc, char** argv) {
 		}
 	} else
 		fentrada = stdin;
-
+	//Abrimos el fichero de entrada
 	if (salida) {
 		if ((fsalida = fopen(ficherosalida, "wb")) == NULL) {
 			fprintf(stderr, "Error al abrir el fichero: %s .\n", ficherosalida);
@@ -188,8 +187,7 @@ int main(int argc, char** argv) {
 		fsalida = stdout;
 	printf("Entrada: %s Salida: %s\n", ficheroentrada, ficherosalida);
 
-	//Preparamos la estructura auxiliar que hemos declarado para guardar
-	//la descomposicion de la clave a lo largo del aplicarDES
+	//Preparamos la estructura auxiliar que hemos declarado para guardar la descomposicion de la clave a lo largo del aplicarDES
 	DescomposicionClave* subclaves = (DescomposicionClave*) malloc(
 			17 * sizeof(DescomposicionClave));
 	tratarClave(clave, subclaves);
@@ -206,28 +204,27 @@ int main(int argc, char** argv) {
 		fentrada = stdin;
 
 		while (fgets(texto_plano, 1024, fentrada) != NULL) {
-			fentrada = fopen("stdin", "wb");	//Abrimos un fichero 'stdin'
+			fentrada = fopen("stdin", "wb");	
 			fwrite(texto_plano, 1, strlen(texto_plano), fentrada);//Metemos el texto en un fichero 'stdin'
 		}
 
-		fclose(fentrada);	//Lo cerramos como escritura
-		fentrada = fopen("stdin", "rb");	//Lo abrimos para lectura
+		fclose(fentrada);	
+		fentrada = fopen("stdin", "rb");
 	}
 
-	//Calculamos el tamanyo del archivo con fseek
-	//que nos permite ir al final del archivo
+	//Calculamos el tamanyo del archivo con fseek que nos permite ir al final del archivo
 	fseek(fentrada, 0L, SEEK_END);
 	//ftell nos dira el tamanyo
 	lon = ftell(fentrada);
-	//volvemos el puntero al inicio para poder trabajr con el fichero
+	//Volvemos el puntero al inicio para poder trabajr con el fichero
 	fseek(fentrada, 0L, SEEK_SET);
 
 	n_bloques = lon / TAM_CLAVE + ((lon % TAM_CLAVE) ? 1 : 0);
 
 	//Hacemos un bucle que vaya cogiendo los bloques a los que aplicar aplicarDES
 	while (fread(bloque_entrada, 1, 8, fentrada)) {
-		aux++;//Llevamos la cuenta de cuantos bloques llevamos para tener en cuenta el padding
-		if (aux == n_bloques) {	//En la ultima iteracion realizamos el padding como sea necesario
+		aux++;//Llevamos la cuenta de cuantos bloques llevamos para el padding
+		if (aux == n_bloques) {
 			//Ciframos
 			if (modo == 1) {
 				padding = 8 - lon % 8;//Comprobamos cuantos bits nos falta para completar bloque
@@ -240,7 +237,7 @@ int main(int argc, char** argv) {
 				aplicarDES(bloque_entrada, bloque_salida, subclaves, modo,
 						chain);
 				memcpy(chain, bloque_salida, 8);
-				//Escribimos la salida en el fichero destino
+				
 				fwrite(bloque_salida, 1, 8, fsalida);
 
 				//Si tiene un tam divisible entre 8 meto un bloque adicional para padding
@@ -261,7 +258,7 @@ int main(int argc, char** argv) {
 					fwrite(bloque_salida, 1, 8 - padding, fsalida);
 				}
 			}
-		} else {			//Si no estamos en el
+		} else {			
 			aplicarDES(bloque_entrada, bloque_salida, subclaves, modo, chain);
             if(modo == 1){
                 memcpy(chain, bloque_salida,8);
@@ -270,14 +267,16 @@ int main(int argc, char** argv) {
             }
 			fwrite(bloque_salida, 1, 8, fsalida);
 		}
-		memset(bloque_salida, 0, 8);			//Limpiamos el bloque de salida
+		memset(bloque_salida, 0, 8);			
 	}
 
+	//Liberamos memoria
 	free(clave);
 	free(subclaves);
 	free(bloque_entrada);
 	free(bloque_salida);
 
+	//Cerramos ficheros
 	if (entrada)
 		fclose(fentrada);
 	if (salida)
@@ -286,7 +285,20 @@ int main(int argc, char** argv) {
 	return 0;
 
 }
-
+/*--------------------------------------------------------------------------
+ Obtiene los argumentos
+ - Entrada:
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Puntero al modo
+	 * Puntero al fichero de salida
+	 * Puntero al fichero de entrada
+	 * Fichero de salida
+	 * Fichero de entrada
+ - Salida:
+	 * -1 si ocurre algun error
+	 * 1 si va bien
+ --------------------------------------------------------------------------*/
 int getArgs(int nArgs, char** args, int* modo, char* ficheroentrada,
 		int* entrada, char* ficherosalida, int* salida) {
 
@@ -323,12 +335,12 @@ int getArgs(int nArgs, char** args, int* modo, char* ficheroentrada,
 /*--------------------------------------------------------------------------
  Obtiene el modo
  - Entrada:
- * Número de argumentos
- * Array de argumentos
- * Puntero al modo
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Puntero al modo
  - Salida:
- * -1 si ocurre algun error
- * 1 si va bien
+	 * -1 si ocurre algun error
+	 * 1 si va bien
  --------------------------------------------------------------------------*/
 int getModo(int nArgs, char** args, int* modo) {
 
@@ -354,7 +366,18 @@ int getModo(int nArgs, char** args, int* modo) {
 	}
 	return flag;
 }
-
+/*--------------------------------------------------------------------------
+ Obtiene una cadena
+ - Entrada:
+	 * Número de argumentos
+	 * Array de argumentos
+	 * Cadena a obtener
+	 * Longitud
+	 * Flag
+ - Salida:
+	 * -1 si ocurre algun error
+	 * 1 si va bien
+ --------------------------------------------------------------------------*/
 int getCadena(int nArgs, char** args, char* cadena, char* flag, int longitud) {
 
 	int i;
@@ -372,27 +395,43 @@ int getCadena(int nArgs, char** args, char* cadena, char* flag, int longitud) {
 		}
 	return aux;
 }
-
-void generaClave(uint8_t* clave) {
+/*--------------------------------------------------------------------------
+ Genera una clave
+ - Entrada:
+	 * Clave que va a ser generada
+ --------------------------------------------------------------------------*/
+void newClave(uint8_t* clave) {
 	int i;
-	unsigned int aux;
 
 	//Creamos una clave con numeros hexadecimales aleatorios
 	for (i = 0; i < TAM_CLAVE; i++) {
 		clave[i] = rand() % 255;
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Se realiza el tratamiento de la clave: aplicando PC1, diviendo en subclaves y 
+ haciendo el LCS a cada subclaves
+ - Entrada:
+	 * Clave
+	 * Subclaves en que se dividira la clave
+ --------------------------------------------------------------------------*/
 void tratarClave(uint8_t* clave, DescomposicionClave* subclaves) {
 
 	cleanDescomposicionClave(subclaves);
+	//Se comprime y permuta la clave (pasa de 64 bits a 56)
 	aplicarPC1(clave, subclaves);
+	//Se divide en las subclaves C y D
 	dividirClave(subclaves);
+	//Se realiza el LCS de las subclaves
 	aplicarLCS(subclaves);
 
 	return;
 }
-
+/*--------------------------------------------------------------------------
+ Se borra la descomposición de las subclaves
+ - Entrada:
+	 * Subclaves
+ --------------------------------------------------------------------------*/
 void cleanDescomposicionClave(DescomposicionClave* subclaves) {
 	int i;
 
@@ -400,54 +439,67 @@ void cleanDescomposicionClave(DescomposicionClave* subclaves) {
 		subclaves[0].k[i] = 0;
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Permuta y comprime la clave
+ - Entrada:
+	 * Clave
+	 * Subclaves
+ --------------------------------------------------------------------------*/
 void aplicarPC1(uint8_t* clave, DescomposicionClave* subclaves) {
 	int i, desp;
 	uint8_t byte_desp;
 
-	//PC1
 	for (i = 0; i < BITS_IN_PC1; i++) {
 		desp = PC1[i];
-		//Mascara para tomar el bit de la posicion correcta de nuestra clave
+		//Mascara para tomar el bit de la posicion correcta de la clave
 		byte_desp = 0x80 >> ((desp - 1) % 8);
-		//Tomamos el byte correspondiente y cogemos el bit de nuestra clave con una AND
+		//Cogemos el bit de nuestra clave
 		byte_desp &= clave[(desp - 1) / 8];
-		//Si era un 1 lo movemos al principio si era 0 se queda como estaba
+		//Si era un 1 lo movemos al principio si era 0 se queda asi
 		byte_desp <<= ((desp - 1) % 8);
-		//Metemos en nuestra subclave el bit obtenido en la posicion que le corresponde moviendo en aritmetica modular 8 el bit
+		//Metemos en nuestra subclave el bit obtenido en la posicion que le corresponde (mod 8)
 		subclaves[0].k[i / 8] |= (byte_desp >> i % 8);
 	}
 
 }
-
+/*--------------------------------------------------------------------------
+ Divide la clave en las subclaves C y D
+ - Entrada:
+	 * Subclaves
+ --------------------------------------------------------------------------*/
 void dividirClave(DescomposicionClave* subclaves) {
 	int i;
-
+	//C corresponde a los 28 primeros bits de K
 	for (i = 0; i < 3; i++) {
 		subclaves[0].c[i] = subclaves[0].k[i];
 	}
-	//C llega hasta el bit 28 de los 56 es decir llega hasta la primera mitad del cuarto byte de K
+	//Por tanto llega hasta la primera mitad del cuarto byte de K
 	subclaves[0].c[3] = subclaves[0].k[3] & 0xF0;
 
-	//Lo mismo para D pero empezando desde donde habiamos parado con c
+	//D usa los 28 bits siguientes
 	for (i = 0; i < 3; i++) {
 		subclaves[0].d[i] = (subclaves[0].k[i + 3] & 0x0F) << 4;
 		subclaves[0].d[i] |= (subclaves[0].k[i + 4] & 0xF0) >> 4;
 	}
-	//Para los ultimos 4 bits de D tomo solo los ultimos 4 de la clave
 	subclaves[0].d[3] = (subclaves[0].k[6] & 0x0F) << 4;
 }
-
+/*--------------------------------------------------------------------------
+ Aplica el LCS a las subclaves C y D
+ - Entrada:
+	 * Subclaves
+ --------------------------------------------------------------------------*/
 void aplicarLCS(DescomposicionClave* subclaves) {
 	int i, j, desp;
 	uint8_t byte_desp, bits_desp1, bits_desp2, bits_desp3, bits_desp4;
 
+	//En cada una de las rondas
 	for (i = 1; i < ROUNDS + 1; i++) {
 		//Rellenamos con la subclave anterior
 		for (j = 0; j < 4; j++) {
 			subclaves[i].c[j] = subclaves[i - 1].c[j];
 			subclaves[i].d[j] = subclaves[i - 1].d[j];
 		}
+		//Obtenemos el desplazamiento de la ronda
 		desp = ROUND_SHIFTS[i];
 		if (desp == 1) {
 			byte_desp = 0x80;
@@ -461,20 +513,20 @@ void aplicarLCS(DescomposicionClave* subclaves) {
 		bits_desp3 = byte_desp & subclaves[i].c[2];
 		bits_desp4 = byte_desp & subclaves[i].c[3];
 
-		//Al primero le desplazo lo necesario a la izquierda y en los huecos que ha dejado meto los desplazados del anterior
+		//Desplazo el primero lo necesario a la izquierda y en sus huecos meto los desplazados del anterior
 		subclaves[i].c[0] <<= desp;
 		subclaves[i].c[0] |= (bits_desp2 >> (8 - desp));
-		//Lo mismo con el segundo
+		//Para el segundo
 		subclaves[i].c[1] <<= desp;
 		subclaves[i].c[1] |= (bits_desp3 >> (8 - desp));
-		//Lo mismo con el tercero
+		//Para el tercero
 		subclaves[i].c[2] <<= desp;
 		subclaves[i].c[2] |= (bits_desp4 >> (8 - desp));
-		//Para el cuarto hay que tener en cuenta que es circular y que ademas solo valen los 4 primeros bits por eso tomo los 4 bits del primer desplazamiento en los huecos que he dejado al mover el ultimo
+		//Para el cuarto hay que tener en cuenta que es circular y que ademas solo valen los 4 primeros bits 
 		subclaves[i].c[3] <<= desp;
 		subclaves[i].c[3] |= (bits_desp1 >> (4 - desp));
 
-		// Mismo proceso de desplazamientos para D
+		// Igual para D
 		bits_desp1 = byte_desp & subclaves[i].d[0];
 		bits_desp2 = byte_desp & subclaves[i].d[1];
 		bits_desp3 = byte_desp & subclaves[i].d[2];
@@ -493,13 +545,14 @@ void aplicarLCS(DescomposicionClave* subclaves) {
 		subclaves[i].d[3] |= (bits_desp1 >> (4 - desp));
 
 		for (j = 0; j < BITS_IN_PC2; j++) {
-			//Mismo procedimiento con PC1 que con PC2 salvo que ahora tomamos solo 48 bits de las subclaves
+			//Lo mismo para PC2 con 48 bits para las subclaves
 			desp = PC2[j];
-			if (desp <= BITS_IN_PC1 / 2) { //Si es menor o igual que 28 es que estoy en C
+			 //Si es menor o igual que 28 es que estoy en C
+			if (desp <= BITS_IN_PC1 / 2) { 
 				byte_desp = 0x80 >> ((desp - 1) % 8);
 				byte_desp &= subclaves[i].c[(desp - 1) / 8];
 				byte_desp <<= ((desp - 1) % 8);
-			} else { //Si es mayor que 28 es que es un bit de D
+			} else { //Si no estoy en D
 				byte_desp = 0x80 >> ((desp - 29) % 8);
 				byte_desp &= subclaves[i].d[(desp - 29) / 8];
 				byte_desp <<= ((desp - 29) % 8);
@@ -509,43 +562,50 @@ void aplicarLCS(DescomposicionClave* subclaves) {
 
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Aplicamos DES
+ - Entrada:
+	 * Bloque entrada
+	 * Bloque salida
+	 * Subclaves
+	 * Modo
+ --------------------------------------------------------------------------*/
 void aplicarDES(uint8_t* bloque_entrada, uint8_t* bloque_salida,
 		DescomposicionClave* subclaves, int modo, uint8_t * chain) {
-	int i, k;
-	uint8_t aux_ip[8], l[4], r[4], li[4], ri[4], er[6],
-			sbox_er[4], fila, col, IV[8];
+	uint8_t aux_ip[8], l[4], r[4], IV[8];
 	memset(aux_ip, 0, 8);
 	memset(bloque_salida, 0, 8);
 
-	generaClave(IV);
-
+	newClave(IV);
+	//En este caso es cuando se cifra
 	if (modo == 1)
 		xorIV(bloque_entrada, chain);
-
+	//Realizamos la permutacion inicial
 	aplicarIP(bloque_entrada, aux_ip);
-
+	//Realizamos las rondas del DES
 	aplicarRondaDES(aux_ip, modo, subclaves, r, l);
-
+	//Realizamos la inversa de la permutacion inicial
 	aplicarInversaIP(bloque_salida, aux_ip, r, l);
-
+	//Este es el caso de cuando se descifra
 	if (modo == 2)
 		xorIV(bloque_salida, chain);
 
 	return;
 
 }
-
+/*--------------------------------------------------------------------------
+ Realizamos la permutacion inicial
+ - Entrada:
+	 * Bloque entrada
+	 * Aux_IP
+ --------------------------------------------------------------------------*/
 void aplicarIP(uint8_t* bloque_entrada, uint8_t* aux_ip) {
 
 	int desp, i;
 	uint8_t byte_desp;
 
+	//Seguimos un  procedimiento similar a con las claves
 	for (i = 0; i < BITS_IN_IP; i++) {
-		/**
-		 * Igual que al generar las subclaves primero tomamos el byte a desplazar y vemos si es un 0 o un 1. Luego lo ponemos al principio
-		 * en nuestra variable auxiliar byte_desp y lo guardamos en la posicion correspondiente del byte correspondiente del bucle
-		 */
 		desp = IP[i];
 		byte_desp = 0x80 >> ((desp - 1) % 8);
 		byte_desp &= bloque_entrada[(desp - 1) / 8];
@@ -556,7 +616,14 @@ void aplicarIP(uint8_t* bloque_entrada, uint8_t* aux_ip) {
 
 	return;
 
-}
+}/*--------------------------------------------------------------------------
+ Realizamos la inversa de la permutacion inicial
+ - Entrada:
+	 * Bloque entrada
+	 * Aux_IP
+	 * L (de las rondas)
+	 * R
+ --------------------------------------------------------------------------*/
 
 void aplicarInversaIP(uint8_t* bloque_salida, uint8_t* aux_ip, uint8_t* r,
 		uint8_t* l) {
@@ -581,7 +648,12 @@ void aplicarInversaIP(uint8_t* bloque_salida, uint8_t* aux_ip, uint8_t* r,
 	return;
 
 }
-
+/*--------------------------------------------------------------------------
+ Realizamos la ronda del DES
+ - Entrada:
+	 * Bloque entrada
+	 * Aux_IP
+ --------------------------------------------------------------------------*/
 void aplicarRondaDES(uint8_t* aux_ip, int modo, DescomposicionClave* subclaves,
 		uint8_t* r, uint8_t* l) {
 
@@ -599,8 +671,8 @@ void aplicarRondaDES(uint8_t* aux_ip, int modo, DescomposicionClave* subclaves,
 		memcpy(li, r, 4);
 		memset(er, 0, 6);
 
+		//Con E procedemos como con IP
 		for (i = 0; i < BITS_IN_E; i++) {
-			//Hacemos lo mismo con E que con IP
 			desp = E[i];
 			byte_desp = 0x80 >> ((desp - 1) % 8);
 			byte_desp &= r[(desp - 1) / 8];
@@ -621,12 +693,7 @@ void aplicarRondaDES(uint8_t* aux_ip, int modo, DescomposicionClave* subclaves,
 
 		memset(sbox_er, 0, 4);
 
-		/**
-		 * En el primer calculo tomamos los bits 6 y 1 y los movemos a la derecha para calcular la fila
-		 * Hacemos lo mismo con los bits 5,4,3 moviendolos 3 posiciones a la derecha
-		 * A partir de aqui vamos rellenando los 24 bits de la salida de las sboxes teniendo en cuenta por el que nos ibamos
-		 * a la hora de aplicar las mascaras para coger los bits de e y hacer los desplazamientos
-		 */
+			//Se van rellenando los 24 bits de la salida de las sboxes teniendo en cuenta por el que nos ibamos para aplicar correctamente las mascaras
 
 		// Byte 1
 		fila = 0;
@@ -635,7 +702,7 @@ void aplicarRondaDES(uint8_t* aux_ip, int modo, DescomposicionClave* subclaves,
 		fila |= ((er[0] & 0x04) >> 2);
 
 		col = 0;
-		//
+		
 		col |= ((er[0] & 0x78) >> 3);
 
 		sbox_er[0] |= ((uint8_t) S_BOXES[0][fila][col] << 4);
@@ -731,7 +798,12 @@ void aplicarRondaDES(uint8_t* aux_ip, int modo, DescomposicionClave* subclaves,
 		}
 	}
 }
-
+/*--------------------------------------------------------------------------
+ Para realizar las XOR del cifrado y descifrado
+ - Entrada:
+	 * Bloque 
+	 * Cadena
+ --------------------------------------------------------------------------*/
 void xorIV(uint8_t* bloque, uint8_t* chain) {
 	int i;
 	for (i = 0; i < TAM_CLAVE; i++) {

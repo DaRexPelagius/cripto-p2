@@ -9,10 +9,8 @@
 /*--------------------------------------------------------------------------
  CONSTANTS
  --------------------------------------------------------------------------*/
-#define ERR_N_ARGS -1
-#define ERR_FLAGS -2
-#define MAX_NAME_LENGTH 256
 
+#define MAX_NAME_LENGTH 256
 #define TAM_BLOQUE 64
 #define TAM_CLAVE 64
 #define NUM_ROUNDS 16
